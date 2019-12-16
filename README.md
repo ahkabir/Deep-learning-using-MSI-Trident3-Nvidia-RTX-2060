@@ -47,7 +47,7 @@ Since I got black screen I decided that I would do a fresh install of Ubuntu 18.
 - Keep hitting CTRL+ALT+F3 while the system was booting
   - With this I was able to see the Ubuntu login prompt (CLI) from previous Ubuntu installation
 - From the CLI promp cleaned up the NVIDIA driver installation
-  - sudo apt-get purge nvidia*
+  - `sudo apt-get purge nvidia*`
 - Remove USB Key
 - Reboot
 
@@ -64,6 +64,18 @@ The driver installation also installed some tools in addition to installing the 
   - Driver Version: 440.26
   - CUDA Version: 10.2
 
+###### 6.1 Removing the default NVIDIA driver
+I checked  to see whether the default NVIDIA driver - nouveau - is loaded.
+- `lscpi | grep nouveau`
+
+In your system if it is loaded get rid of it now before rebooting the machine. You can do that in the following way:
+- Edit /etc/default/grub file
+- In the line where it shows GRUB_CMDLINE_LINUX_DEFAULT, add modprobe.blacklist=nouveau after the word splash. The updated line should look like the following:
+- - `GRUB_CMDLINE_LINUX_DEFAULT="quiet splash modprobe.blacklist=nouveau"`
+- Then update the grub:
+- - `sudo update-grub`
+- - - This in turn updates the /boot/grub/grub.cfg file
+
 At this point the system was rebooted. Ubuntu successfully booted and there was no issues with GUI.
 
 ## 7. Installing CUDA
@@ -71,10 +83,70 @@ The CUDA installation in Linux is described in details in this NVIDIA Guide : ht
 
 This REAMDE briefly describes the installation steps which are all captured from the NVIDIA Guide.
 
+#### 7.1 `nvidia-smi`
+When the NVIDIA driver was installed it also installed some tools including `nvidia-smi`. This tool was run to check to see whether NVIDIA driver is properly installed, the version of the driver etc.
+- `nvidia-smi`
+- - Driver Version: 440.26
+- - CUDA Version: 10.2
+
+#### 7.2 Installing CUDA toolkit
+CUDA tools were installed using the following command:
+
+- `sudo apt install nvidia-cuda-toolkit`
+- - The above command also installed a NVIDIA CUDA compiler
+- - `nvcc --version`
+- - This command showed CUDA version of 9.1
+
+In section 7.1 the CUDA version shown was 10.2 and nvcc showed 9.1. There is a discrepancy with the two versions. This requires some explanations.
+
+The nvidia-smi command's CUDA version is the CUDA driver's viewpoint. Whereas, nvcc command's CUDA version is the runtime viewpoint of the CUDA toolkit.
+
+There is a way to make sure that both versions will be the same. It is dicussed in the next section.
+
+#### 7.3 CUDA installation
+
+The site (https://developer.nvidia.com/cuda-downloads) allows user to answers couple of questions and provides details instructions on how to download and install CUDA. For my system it looked like the following:
+
+- `wget http://developer.download.nvidia.com/compute/cuda/10.2/Prod/local_installers/cuda-repo-ubuntu1804-10-2-local-10.2.89-440.33.01_1.0-1_amd64.deb`
+- `sudo dpkg -i cuda-repo-ubuntu1804-10-2-local-10.2.89-440.33.01_1.0-1_amd64.deb`
+- `sudo apt-key add /var/cuda-repo-10-2-local-10.2.89-440.33.01/7fa2af80.pub`
+- `sudo apt-get update`
+- `sudo apt-get -y install cuda`
+
+I updated my .bashrc file to include some CUDA specific PATH and EXPORT definitions:
+
+- `export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64:${LD_LIBRARY_PATH}`
+- `export PATH=/usr/local/cuda-10.2/bin:${PATH}`
+
+Once .bashrc was updated like above my `nvidia-smi` and `nvcc --version` were showing the same CUDA version - 10.2
+
+## 8. Installing CuDNN
+In order to get CuDNN from NVIDIA website (https://developer.nvidia.com/rdp/form/cudnn-download-survey) an account is required. I had created an account for myself. With my login credentials I was able to download the following files:
+- `libcudnn7-doc_7.6.5.32-1+cuda10.2_amd64.deb`
+- `libcudnn7-dev_7.6.5.32-1+cuda10.2_amd64.deb`
+- `libcudnn7_7.6.5.32-1+cuda10.2_amd64.deb`
+
+After downloading these files I ran the following command to install CuDNN
+- `sudo dpkg -i libcudnn7*`
 
 
+#### 8.1 Verifying CuDNN installation
+There are some CuDNN examples that comes with the installation. I ran the `mnistCUDNN` example to make sure my CuDNN installation is working. I did the following to run the example:
+- `cp -r /usr/src/cudnn_samples_v7 ${HOME}`
+- `cd ${HOME}/cudnn_samples_v7/mnistCUDNN`
+- `make clean && make`
 
+With this the build failed. Then I had to make the following changes to make the build successful.
 
+- Edit `/usr/include/cudnn.h` file
+- - change this line:
+- - - `#include "driver-types.h"`
+- - to:
+- - - `#include <driver-types.h>`
+- Rebuild
+
+With the changes made above when I ran ./mnistCUDNN I could see this line at the end of the output log:
+`Test passed!`
 
 
 
