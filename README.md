@@ -154,6 +154,92 @@ With this the build failed. Then I had to make the following changes to make the
 With the changes made above when I ran ./mnistCUDNN I could see this line at the end of the output log:
 `Test passed!`
 
+## 8. Building and installing Tensorflow from source for NVIDIA GPU GeForce RTX 2060
+In this section I will describe how I built Tensorflow from source. The procedures involved is alreay very well document here: https://www.tensorflow.org/install/source
+
+My guide contains the gist of what is described in the above link. If you are building Tensorflow from source then you need the build tool bazel. And bazel, in turn could be built from source. When building Tensorflow from source it is important to find out which version of bazel will work for building which version of Tensorflow. The tensorflow.org website contains some tested configurations: https://www.tensorflow.org/install/source#gpu
+
+For my GPU card I decided to build and install the followings:
+- Bazel
+- - version 0.24.1
+- Tensorflow
+- - 1.0
+#### 8.1 Building bazel from source
+
+I followed these steps to install bazel:
+
+- Download the zip file : Download bazel zip file, bazel-0.28.1-dist.zip, from here : https://github.com/bazelbuild/bazel/releases
+- Install the prerequisites:
+- - `sudo apt-get install build-essential openjdk-8-jdk python zip unzip
+- Extract zip file in some ${BAZEL_SRC} directory
+- Build bazel with the following command
+- - `env EXTRA_BAZEL_ARGS="--host_javabase=@local_jdk//:jdk" bash ./compile.sh
+- The binary is placed in output/bazel
+- Copy  `output/bazel` to some system directory, like, `/usr/local/bin` and make sure this is in the `PATH` variable
+- Check to see whether bazel is installed properly by running the following command:
+- - `bazel version`
+
+#### 8.2 Building Tensorflow from source (GPU)
+The details steps for building and installing Tensorflow are described below:
+
+###### 8.2.1 Install pre-requisite packages
+Install all the prerequisite packages:
+- `sudo apt-get update`
+- `sudo apt-get install python-pip python-dev`
+- `sudo apt-get install python3-pip python3-dev`
+- `sudo apt-get install build-essential cmake git unzip pkg-config`
+- `sudo apt-get install python-numpy python-scipy python-matplotlib python-yaml`
+- `sudo apt install python-dev python-pip`
+- `sudo apt install python3-dev python3-pip`
+- `pip install -U --user pip six numpy wheel setuptools mock 'future>=0.17.1'`
+- `pip install -U --user keras_applications --no-deps`
+- `pip install -U --user keras_preprocessing --no-deps`
+
+Notes: that when you use the `-U` option with the `pip` command it may end up upgrading the pip version and the next `pip` command may fail with an error saying `pip can't import main`. To solve this problem do the following:
+- `sudo python -m pip uninstall && sudo apt install python-pip --reinstall`
+
+###### 8.2.2 Obtain Tensorflow source
+- `cd ${TENSORFLOW_SRC}`
+- `git clone https://github.com/tensorflow/tensorflow.git`
+- `cd tensorflow`
+- `git checkout -b r2.0 remotes/origin/r2.0`
+
+###### 8.2.3 Configure Tensorflow build
+- `cd ${TENSORFLOW_SRC}/tensorflow
+- ./configure
+- - Make sure you have the following settings. For brevity full option names are not provided. Please checkout the Tensorflow site for details
+- - - cuda = yes
+- - - jit = no
+- - - RT = no
+- - - ROCm = no
+
+###### 8.2.4 Build Tensorflow pip package
+- `bazel build //tensorflow/tools/pip-package:build-pip-package`
+Once I executed the above command I got the following error:
+Error:
+- fatbinary fatal   : Unknown option '-bin2c-path'
+Fix: (https://github.com/tensorflow/tensorflow/issues/34429#issuecomment-557408498)
+- remove the line "--bin2c-path=%s" % bin2c.dirname, from the file `third_party/nccl/build_defs.bzl.tpl`
+
+With the above fix I was able to build Tensorflow pip package
+
+###### 8.2.5 Build Tensorflow .whl package under /tmp/tensorflow-pkg
+- `./bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg`
+
+###### 8.2.6 Build the package (final step)
+- `pip install /tmp/tensorflow_pkg/tensorflow-version-tags.whl`
+
+This completes the Tensorflow build.
+
+
+
+
+
+
+
+
+
+
 
 
 
