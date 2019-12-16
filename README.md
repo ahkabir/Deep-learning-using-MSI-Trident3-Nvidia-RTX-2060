@@ -47,7 +47,7 @@ Since I got black screen I decided that I would do a fresh install of Ubuntu 18.
 - Keep hitting CTRL+ALT+F3 while the system was booting
   - With this I was able to see the Ubuntu login prompt (CLI) from previous Ubuntu installation
 - From the CLI promp cleaned up the NVIDIA driver installation
-  - $sudo apt-get purge nvidia*
+  - sudo apt-get purge nvidia*
 - Remove USB Key
 - Reboot
 
@@ -55,11 +55,11 @@ Finally, I was able to see the Ubuntu 18.03 installer GUI and ended up successfu
 
 ## 6. Installing NVIDIA GPU driv
 First I found out the NVIDIA GPU driver version that I need to install from NVIDIA Drivers Download site (https://www.nvidia.com/Download/index.aspx?lang=en-us). After I filled the form with the make and model of my GPU card I got the driver version number. It was 440.36 at the time when I installed.
-- $ sudo apt-apt-repository ppa:graphics-drivers/ppa
-- $ sudo apt update
-- $ sudo apt install nvidia-driver-440
+- `sudo apt-apt-repository ppa:graphics-drivers/ppa`
+- `sudo apt update`
+- `sudo apt install nvidia-driver-440`
 The driver installation also installed some tools in addition to installing the GPU driver. Once such tool is nvidia-smi. I used this tool the following way to get to know the driver details:
-- $ nvidia-smi
+- `nvidia-smi`
   - Driver Version: 440.26
   - CUDA Version: 10.2
 At this point the system was rebooted. Ubuntu successfully booted and there was no issues with GUI.
