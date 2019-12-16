@@ -6,12 +6,19 @@ Gets to 99.25% test accuracy after 12 epochs
 '''
 
 from __future__ import print_function
-import keras
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras import backend as K
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.python.keras.datasets import mnist
+from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.layers import Dense, Dropout, Flatten
+from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
+from tensorflow.python.keras import backend as K
+
+config = tf.compat.v1.ConfigProto()
+#config.gpu_options.per_process_gpu_memory_fraction = 0.9
+config.gpu_options.allow_growth = True
+K.set_session(tf.compat.v1.Session(config=config))
+
 
 batch_size = 128
 num_classes = 10
@@ -56,8 +63,11 @@ model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(num_classes, activation='softmax'))
 
-model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.Adadelta(),
+#model.compile(loss=keras.losses.categorical_crossentropy,
+#              optimizer=keras.optimizers.Adadelta(),
+#              metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',
+              optimizer=tf.keras.optimizers.Adam(0.01),
               metrics=['accuracy'])
 
 model.fit(x_train, y_train,

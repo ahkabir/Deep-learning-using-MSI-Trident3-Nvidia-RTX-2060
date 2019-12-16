@@ -245,6 +245,11 @@ that Keras is already integrated in Tensorflow 2.0
 The keras_example/ directory of this github project contains working
 examples that use Keras APIs and uses Tensorflow in the backend.
 
+The mnist_cnn.py under keras_example/ is a working application that
+uses my NVIDIA GeForce RTX 2060 for training MNIST dataset. See the
+keras_example/README.txt to find out the successful log from running
+this application which trains MNIST dataset using GPU.
+
 
 
 
