@@ -50,6 +50,12 @@ Since I got black screen I decided that I would do a fresh install of Ubuntu 18.
   - `sudo apt-get purge nvidia*`
 - Remove USB Key
 - Reboot
+- Keep pressing DEL key to enter BIOS to check the following settings:
+- - Security should be disabled
+- - Fastboot should be disabled
+- - Windows related things should be disabled
+
+Save these settings and exit BIOS. Note that these BIOS settings are very important.
 
 Finally, I was able to see the Ubuntu 18.03 installer GUI and ended up successfully installing Ubuntu 18.03
 
