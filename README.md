@@ -58,11 +58,19 @@ First I found out the NVIDIA GPU driver version that I need to install from NVID
 - `sudo apt-apt-repository ppa:graphics-drivers/ppa`
 - `sudo apt update`
 - `sudo apt install nvidia-driver-440`
+
 The driver installation also installed some tools in addition to installing the GPU driver. Once such tool is nvidia-smi. I used this tool the following way to get to know the driver details:
 - `nvidia-smi`
   - Driver Version: 440.26
   - CUDA Version: 10.2
+
 At this point the system was rebooted. Ubuntu successfully booted and there was no issues with GUI.
+
+## 7. Installing CUDA
+The CUDA installation in Linux is described in details in this NVIDIA Guide : https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
+
+This REAMDE briefly describes the installation steps which are all captured from the NVIDIA Guide.
+
 
 
 
