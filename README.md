@@ -232,6 +232,19 @@ With the above fix I was able to build Tensorflow pip package
 This completes the Tensorflow build.
 
 
+## 9. Keras
+- Clone the Keras repository in ${KERAS_SRC}
+- - `cd ${KERAS_SRC}`
+- - `git clone https://github.com/fchollet/keras
+
+Note that we cloned the keras repository so that we can work on the
+examples under examples/ folder. There is no need to install separate
+Keras package from package management system. The reason for this is
+that Keras is already integrated in Tensorflow 2.0
+
+The keras_example/ directory of this github project contains working
+examples that use Keras APIs and uses Tensorflow in the backend.
+
 
 
 
