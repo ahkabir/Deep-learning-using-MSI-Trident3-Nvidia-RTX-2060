@@ -35,5 +35,22 @@ Once language problem was taken care of the Desktop booted Windows 10 home (came
 ## 3. Dual Partition - adding Ubuntu in second partition
 With Windows 10 home in one partition I thought of installing Ubuntu in a second partition. Although primarily I planned on using Ubuntu but being able to keep the Windows 10 home that came for price looked to me as a more practical option. So I decided to install Ubuntu 18.03 in the second partition.
 I created a USB Key with Ubuntu 18.03 Desktop installer and inserted that to one of the USB ports. Changing the boot priority to USB Key as highest priority I was able to boot from USB Key and ran the Ubuntu installer. Installation of Ubuntu is well documented and is therefore beyond the scope of this README.
-Once Ubuntu was installed I verified that I could boot either Windows 10 home or Ubuntu 18.03
+Once Ubuntu was installed I verified that I could boot either Windows 10 home or Ubuntu 18.03.
+Also I installed NVIDIA GPU drivers for my GPU card.
+
+## 4. Requiring larger disk space for Ubuntu
+After creating the dual partition I realized half of the SSD disk space (512/2=256GB) for Ubuntu where I would do my Deep Learning was not sufficient. So I decided to wipe out the Windows 10 partition and expand the Ubuntu disk space.
+To make the uninstallation easy from Ubuntu partition I installed an application called OS Uninstaller (https://help.ubuntu.com/community/OS-Uninstaller). I used this application and selected Windows 10 for uninstallation. I ended up getting a blackscreen. So I wouldn't recommend using OS-Uninstaller.
+
+## 5. Single partition of Ubuntu 18.03
+Since I got black screen I decided that I would do a fresh install of Ubuntu 18.03 and tried to boot from USB key. But due to some incompatibilities of NVIDIA driver from previous installation, I was not able to see the GUI of Ubuntu 18.03 installer. In order to solve this problem I did the following:
+- Keep hitting CTRL+ALT+F3 while the system was booting
+  - With this I was able to see the Ubuntu login prompt (CLI) from previous Ubuntu installation
+- From the CLI promp cleaned up the NVIDIA driver installation
+  - $sudo apt-get purge nvidia*
+- Remove USB Key
+- Reboot
+
+Finally, I was able to see the Ubuntu 18.03 installer GUI
+
 
