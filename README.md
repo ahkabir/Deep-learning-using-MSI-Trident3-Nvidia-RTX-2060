@@ -59,7 +59,7 @@ Save these settings and exit BIOS. Note that these BIOS settings are very import
 
 Finally, I was able to see the Ubuntu 18.03 installer GUI and ended up successfully installing Ubuntu 18.03
 
-## 6. Installing NVIDIA GPU driv
+## 6. Installing NVIDIA GPU driver
 First I found out the NVIDIA GPU driver version that I need to install from NVIDIA Drivers Download site (https://www.nvidia.com/Download/index.aspx?lang=en-us). After I filled the form with the make and model of my GPU card I got the driver version number. It was 440.36 at the time when I installed.
 - `sudo apt-apt-repository ppa:graphics-drivers/ppa`
 - `sudo apt update`
@@ -170,11 +170,11 @@ I followed these steps to install bazel:
 
 - Download the zip file : Download bazel zip file, bazel-0.28.1-dist.zip, from here : https://github.com/bazelbuild/bazel/releases
 - Install the prerequisites:
-- - `sudo apt-get install build-essential openjdk-8-jdk python zip unzip
+- - `sudo apt-get install build-essential openjdk-8-jdk python zip unzip`
 - Extract zip file in some ${BAZEL_SRC} directory
 - Build bazel with the following command
-- - `env EXTRA_BAZEL_ARGS="--host_javabase=@local_jdk//:jdk" bash ./compile.sh
-- The binary is placed in output/bazel
+- - `env EXTRA_BAZEL_ARGS="--host_javabase=@local_jdk//:jdk" bash ./compile.sh`
+- The binary is placed in `output/bazel`
 - Copy  `output/bazel` to some system directory, like, `/usr/local/bin` and make sure this is in the `PATH` variable
 - Check to see whether bazel is installed properly by running the following command:
 - - `bazel version`
@@ -205,8 +205,8 @@ Notes: that when you use the `-U` option with the `pip` command it may end up up
 - `git checkout -b r2.0 remotes/origin/r2.0`
 
 ###### 8.2.3 Configure Tensorflow build
-- `cd ${TENSORFLOW_SRC}/tensorflow
-- ./configure
+- `cd ${TENSORFLOW_SRC}/tensorflow`
+- `./configure`
 - - Make sure you have the following settings. For brevity full option names are not provided. Please checkout the Tensorflow site for details
 - - - cuda = yes
 - - - jit = no
@@ -216,10 +216,10 @@ Notes: that when you use the `-U` option with the `pip` command it may end up up
 ###### 8.2.4 Build Tensorflow pip package
 - `bazel build //tensorflow/tools/pip-package:build-pip-package`
 Once I executed the above command I got the following error:
-Error:
-- fatbinary fatal   : Unknown option '-bin2c-path'
-Fix: (https://github.com/tensorflow/tensorflow/issues/34429#issuecomment-557408498)
-- remove the line "--bin2c-path=%s" % bin2c.dirname, from the file `third_party/nccl/build_defs.bzl.tpl`
+- Error:
+- - fatbinary fatal   : Unknown option '-bin2c-path'
+- Fix: (https://github.com/tensorflow/tensorflow/issues/34429#issuecomment-557408498)
+- - remove the line "--bin2c-path=%s" % bin2c.dirname, from the file `third_party/nccl/build_defs.bzl.tpl`
 
 With the above fix I was able to build Tensorflow pip package
 
