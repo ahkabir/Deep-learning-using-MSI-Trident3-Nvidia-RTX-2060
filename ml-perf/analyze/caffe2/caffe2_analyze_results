@@ -1,0 +1,59 @@
+#!/bin/sh
+
+num_cores=1
+i=0
+
+network=$1
+benchmark_type=$2
+temp_file=$3
+out_file=$4
+batch=$5
+
+# batching parameters
+start=$(echo "${5}"|cut -d: -f1)
+end=$(echo "${5}"|cut -d: -f2)
+step=$(echo "${5}"|cut -d: -f3)
+
+parse_monoshot ()
+{
+    printf "%-8s  %-8s  %-8s\n" "min" "max" "avg" > "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${3}" = "Main" ] && [ "${4}" = "runs" ]; then
+            printf "%-8s  %-8s  %-8s\n" "N/A" "N/A" "${9}" >> "${out_file}"
+        fi
+    done
+}
+
+parse_core_scale ()
+{
+    printf "%-5s  %-8s  %-8s  %-8s\n" "#cores" "min" "max" "avg" > "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${3}" = "Main" ] && [ "${4}" = "runs" ]; then
+            printf "%-5s   %-8s  %-8s  %-8s\n" "${num_cores}" "N/A" "N/A" "${9}" >> "${out_file}"
+            num_cores=$((num_cores+1))
+        fi
+    done
+}
+
+parse_batch ()
+{
+    printf "%-6s  %-8s  %-8s  %-8s\n" "batch" "min" "max" "avg" > "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${3}" = "Main" ] && [ "${4}" = "runs" ]; then
+            batch_count=$(($start+$i*$step))
+            printf "%-6s   %-8s  %-8s  %-8s\n" "${batch_count}" "N/A" "N/A" "${9}" >> "${out_file}"
+            i=$((i+1))
+        fi
+    done
+}
+
+if [ "${benchmark_type}" = "monoshot" ]; then
+    parse_monoshot
+elif [ "${benchmark_type}" = "core_scale" ]; then
+    parse_core_scale
+elif [ "${benchmark_type}" = "batch_scale" ]; then
+    parse_batch
+fi

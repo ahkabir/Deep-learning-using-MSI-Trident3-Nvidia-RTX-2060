@@ -1,0 +1,122 @@
+#!/bin/sh
+
+#NCNN
+#====
+#All examples shown below are for local model files. Instead, "remote" or "URL"
+#file location can be used as follows:
+# --model_location=remote:user:password:server:/file_path
+# --model_location=URL:http://..../model_file
+
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet" \
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet" \
+
+#core_thread_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_thread_scale \
+               --model_location=local:/home/ahsan/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet" \
+               --aux_data="128:128:3"
+
+#Caffe
+#=====
+#All examples shown below are for local model files. Instead, "remote" or "URL"
+#file location can be used as follows:
+# --model_location=remote:user:password:server:/file_path
+# --model_location=URL:http://..../model_file
+
+#monoshot
+./ml_benchmark --framework=Caffe \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe --meta_data="8:alexnet"
+#core_scale
+./ml_benchmark --framework=Caffe \
+                --bench_type=core_scale \
+                --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+                --model_format=Caffe --meta_data="8:alexnet"
+
+#shape_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe \
+               --meta_data="8:alexnet" \
+               --aux_data=128:128:3
+#batch_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=batch_scale \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe \
+               --meta_data="8:alexnet" \
+               --batch_size=32:96:32
+
+#monoshot; model conversion from tensorflow to caffe
+ ./ml_benchmark --framework=Caffe \
+                --bench_type=monoshot \
+                --model_format=Tensorflow \
+                --meta_data="8:vgg16"
+
+#Tensorflow
+#==========
+
+#monoshot
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet"
+
+#core_scale
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet"
+#batch_scale
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=batch_scale\
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet" --batch_size=start:end:step
+
+#shape_scale
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet" --aux_data=224:224:3
+
+#core_thread_scale
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=core_thread_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet:8"
+
+#thread_scale
+./ml_benchmark --framework=Tensorflow \
+               --bench_type=thread_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_models/caffe/alexnet/alexnet.pb \
+               --model_format=Tensorflow \
+               --meta_data="data:float:prob:1,227,227,3:alexnet:8"
+

@@ -1,0 +1,9 @@
+#!/bin/sh
+OSVERSION="Unknown"
+if [ -f "/proc/version" ]; then
+	OSVERSION="$(/bin/cat /proc/version)"
+fi
+set -- ${OSVERSION}
+echo "${11}"
+
+

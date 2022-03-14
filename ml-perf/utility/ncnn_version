@@ -1,0 +1,9 @@
+#!/bin/sh
+# $1 = NCNN source directory
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+cd "${NCNN_DIR}"
+commit=`git log`
+set -- ${commit}
+cd "${WORKDIR}"
+echo "${2}"

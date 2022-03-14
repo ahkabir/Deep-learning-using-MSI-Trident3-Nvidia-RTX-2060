@@ -1,0 +1,174 @@
+#!/bin/bash
+
+num_cores=1
+num_threads=0
+i=0
+
+network=$1
+benchmark_type=$2
+temp_file=$3
+out_file=$4
+
+parse_monoshot()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s">> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- $LINE
+        if [ "${5}" = "Timings" ]; then
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+            #printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+        fi
+    done 
+}
+
+parse_core_scale ()
+{
+    printf "%-6s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "#cores" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s"> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${5}" = "Timings" ]; then
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            printf "%-6s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_cores}" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+            num_cores=$((num_cores+1))
+        fi
+    done
+}
+
+parse_thread_scale ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "#threads" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s"> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${5}" = "Timings" ]; then
+            num_threads=$((num_threads+1))
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_threads}" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+        fi
+    done
+}
+
+parse_core_thread_scale ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "#cores" "#threads" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s"> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${5}" = "Timings" ]; then
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            num_threads=$((num_threads+1))
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_cores}" "${num_threads}" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+            if [ "${num_threads}" = "${thread}" ]; then
+                num_cores=$((num_cores+1))
+                num_threads=0
+            fi
+        fi
+    done
+}
+
+parse_batch ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "#batch" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s"> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${5}" = "Timings" ]; then
+            batch_count=$(($start+$i*$step))
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+            i=$((i+1))
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${batch_count}" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+        fi
+    done
+}
+
+parse_shape ()
+{
+    printf "%-10s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "shape" "min" "max" "avg" "avg_i" "std" "FLOPs" "FLOPs/s">> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${5}" = "Timings" ]; then
+            shape="${xdim}:${ydim}:${channel}"
+            min=$(echo "${10}"| cut -d= -f2)
+            max=$(echo "${11}"| cut -d= -f2)
+            avg=$(echo "${12}"| cut -d= -f2)
+            std=$(echo "${13}"| cut -d= -f2)
+        elif [ "${5}" = "Average" ]; then
+            avg_inference=$(echo "${14}"| cut -d, -f1)
+        elif [ "${5}" = "FLOPs" ] && [ "${6}" = "estimate:" ]; then
+            total_flops="${7}"
+        elif [ "${5}" = "FLOPs/second:" ]; then
+            flops_per_sec="${6}"
+            printf "%-10s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${shape}" "${min}" "${max}" "${avg}" "${avg_inference}" "${std}" "${total_flops}" "${flops_per_sec}">> "${out_file}"
+        fi
+    done
+}
+
+if [ "${benchmark_type}" = "core_scale" ]; then
+    parse_core_scale
+elif [ "${benchmark_type}" = "core_thread_scale" ]; then
+    thread="${5}"
+    parse_core_thread_scale
+elif [ "${benchmark_type}" = "thread_scale" ]; then
+    thread="${5}"
+    parse_thread_scale
+elif [ "${benchmark_type}" = "monoshot" ]; then
+    parse_monoshot
+elif [ "${benchmark_type}" = "batch_scale" ]; then
+    batch="${5}"
+    start=$(echo "${5}"|cut -d: -f1)
+    end=$(echo "${5}"|cut -d: -f2)
+    step=$(echo "${5}"|cut -d: -f3)
+    parse_batch
+elif [ "${benchmark_type}" = "shape_scale" ]; then
+    shape="${5}"
+    xdim=$(echo "${5}"| cut -d: -f1)
+    ydim=$(echo "${5}"| cut -d: -f2)
+    channel=$(echo "${5}"| cut -d: -f3)
+    echo "xdim=${xdim}, ydim=${ydim} channel=${channel}"
+    parse_shape
+fi
+
+

@@ -1,0 +1,21 @@
+
+(1) Download bazel-<version>-dist.zip from GitHub, for example bazel-0.18.0-dist.zip
+https://github.com/bazelbuild/bazel/releases
+
+(2) Unpack the zip file somewhere on disk.
+
+(3) Install prerequisites:
+sudo apt-get install build-essential openjdk-8-jdk python zip unzip
+
+(4) Open a shell or Terminal window.
+
+(5) cd to the directory where you unpacked the distribution archive.
+
+(6) Run the compilation script: bash ./compile.sh.
+
+The compiled output is placed into output/bazel. This is a self-contained Bazel
+binary, without an embedded JDK. You can copy it anywhere or use it in-place.
+For convenience we recommend copying this binary to a directory that’s on your
+PATH (such as /usr/local/bin on Linux).
+
+

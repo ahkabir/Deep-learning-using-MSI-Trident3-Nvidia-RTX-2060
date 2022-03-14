@@ -1,0 +1,43 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+
+# Model formats supported by NCNN framework
+# ==========================================
+# This script returns the following values based
+# on the model format support. The NCNN model
+# 1          = not supported at this time
+# conversion = accept the format but needs conversion to NCNN model format
+# future     = code exists for conversion but build broken or run-time issues
+# native     = natively supported by NCNN framework
+
+case "${model_format}" in
+(Tensorflow)
+    echo "1"
+    ;;
+(Tensorflow-lite)
+    echo "1"
+    ;;
+(Caffe)
+    echo "conversion"
+    ;;
+(Caffe2)
+    echo "1"
+    ;;
+(NCNN)
+    echo "native"
+    ;;
+(ONNX)
+    echo "future"
+    ;;
+(NNEF)
+    echo "1"
+    ;;
+(Darknet)
+    echo "future"
+    ;;
+(*)
+    echo "unknown"
+    ;;
+esac
+return

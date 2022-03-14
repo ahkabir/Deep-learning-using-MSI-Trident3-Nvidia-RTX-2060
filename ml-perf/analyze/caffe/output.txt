@@ -1,0 +1,2 @@
+min       max       avg     
+N/A       N/A       178.603 

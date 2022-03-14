@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# when we are piping we end up creating subshell.
+# a variable that is in scope in subshell is not
+# visible to parent shell. Using echo within the
+# paranthesis ensures that count is in the same
+# subshell
+count=0
+cat /proc/cpuinfo | grep "^processor" | (while read LINE; do
+    count=$((count+1))
+done && echo "${count}")

@@ -1,0 +1,39 @@
+#!/bin/sh
+#Tensorflow
+#==========
+#monoshot
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet"
+
+#core_scale
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet"
+
+#batch_scale
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=batch_scale\
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet" \
+               --batch_size=32:96:32
+
+#shape_scale
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet" \
+               --aux_data=224:224:3
+
+#thread_scale
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=thread_scale \
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet:8"

@@ -1,0 +1,34 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+
+#$1 = cpu load file
+#returns the mean_cpu_util to the caller
+
+cpu_load_file="${1}"
+
+aggregrate_cpu_util=`awk "BEGIN{print (0.0)}"`
+mean_cpu_util=`awk "BEGIN{print (0.0)}"`
+num_of_samples=`awk "BEGIN{print (0.0)}"`
+idle_threshold=`awk "BEGIN{print (90.0)}"`
+
+echo "idle    util   #samples  aggregrate_cpu_util  mean_cpu_util" >> idle.txt
+cat "${cpu_load_file}" | (while read LINE; do
+    set -- ${LINE}
+    if [ "${3}" = "all" ]; then
+        idle="${13}"
+        var=`awk 'BEGIN{ print "'${idle}'"<"'${idle_threshold}'" }'`
+        if [ "$var" -eq 1 ]; then
+            user="${4}"
+            sys="${6}"
+            #echo  "${user}" "${sys}"  >> idle.txt
+            num_of_samples=`awk "BEGIN{print (${num_of_samples} + 1.0)}"`
+            #temp=`awk "BEGIN{print (${user}+${sys})}"`
+            aggregrate_cpu_util=`awk "BEGIN{print (${user}+${sys}+${aggregrate_cpu_util})}"`
+            mean_cpu_util=`awk "BEGIN{print (${aggregrate_cpu_util} / ${num_of_samples})}"`
+            #echo "${idle}"  "${temp}" "${num_of_samples}" "${aggregrate_cpu_util}" >> idle.txt
+            #echo  "${temp}" "${num_of_samples}"  >> idle.txt
+        fi
+    fi
+done && echo "${mean_cpu_util}")
+

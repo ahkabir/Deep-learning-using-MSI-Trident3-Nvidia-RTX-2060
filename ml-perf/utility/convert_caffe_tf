@@ -1,0 +1,68 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+show_usage()
+{
+cat<<EOF
+usage: convert_caffe_tf [-n <network_name>] [-h]
+
+  Options:
+    -n <network_name>      Name of the network to test
+    -h                     Display this help
+
+  Converts a caffemodel file to pb file.
+
+  Supported network names are:
+     * alexnet
+     * googlenet
+     * lenet
+     * mobilenet
+     * vgg16
+EOF
+}
+
+
+alexnet()
+{
+    echo "PWD is ${PWD}"
+    echo "CAFFE_TF_CONVERT is ${CAFFE_TF_CONVERT}"
+    echo "CAFFE_MODEL_PATH is ${CAFFE_MODEL_PATH}"
+    echo "CAFFE_MODEL_NAME_PREFIX is ${CAFFE_MODEL_NAME_PREFIX}"
+    echo "MODELDIR is ${MODELDIR}"
+    python ${CAFFE_TF_CONVERT} \
+           ${CAFFE_MODEL_PATH}/${CAFFE_MODEL_NAME_PREFIX}alexnet/deploy.prototxt \
+           --caffemodel ${MODELDIR}/caffe/${CAFFE_ALEXNET_NAME} \
+           --data-output-path ${MODELDIR}/tf/downloads/output.mat \
+           --code-output-path ${MODELDIR}/tf/downloads/output.py \
+           --standalone-output-path ${MODELDIR}/tf/downloads/alexnet.pb
+    
+    mv ${MODELDIR}/tf/downloads/alexnet.pb ${MODELDIR}/tf/alexnet/
+}
+
+convert()
+{
+    case "${network_name}" in
+    (alexnet)
+        alexnet
+        ;;
+    esac
+}
+
+while getopts ":n:h" Option
+do
+    case "$Option" in
+    (n)
+        network=1
+        network_name=${OPTARG}
+        echo -e "network name is ${network_name}"
+        ;;
+    (h|help) show_usage; exit;;
+    (*)
+        show_usage
+        echo "error: no match ${Option}" >&2
+        break;;
+    esac
+done
+shift $(($OPTIND -1))
+
+convert

@@ -1,0 +1,15 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+# $1 = deploy prototxt
+# $2 = caffemodel
+# $3 = name of the network
+network="${3}"
+
+PROTO_TXT="${CAFFE_DIR}/.build_release/tools/upgrade_net_proto_text"
+PROTO_BIN="${CAFFE_DIR}/.build_release/tools/upgrade_net_proto_binary"
+
+${PROTO_TXT} ${1} ${1}_new
+${PROTO_BIN} ${2} ${2}_new
+
+${NCNN_TOOLS_BUILD_DIR}/caffe/caffe2ncnn ${1}_new ${2}_new ${network}.param ${network}.bin

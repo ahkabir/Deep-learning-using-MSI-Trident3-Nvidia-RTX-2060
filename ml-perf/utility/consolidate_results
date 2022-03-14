@@ -1,0 +1,43 @@
+#!/bin/bash
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+[ -f "../../configure" ] && . "../../configure"
+TFDIR="${RESULTDIR}/tf"
+CAFFEDIR="${RESULTDIR}/caffe"
+CAFFE2DIR="${RESULTDIR}/caffe2"
+NCNNDIR="${RESULTDIR}/ncnn"
+TFLITEDIR="${RESULTDIR}/tflite"
+
+TF_FILES=${TFDIR}/*
+NCNN_FILES=${NCNNDIR}/*
+CAFFE_FILES=${CAFFEDIR}/*
+CAFFE2_FILES=${CAFFE2DIR}/*
+TFLITE_FILES=${TFLITEDIR}/*
+
+#if [ "$a" == "$b" ]
+#This is a synonym for =.
+#Note	
+#The == comparison operator behaves differently within a double-brackets test 
+#than within single brackets.
+#[[ $a == z* ]]   # True if $a starts with an "z" (pattern matching).
+#[[ $a == "z*" ]] # True if $a is equal to z* (literal matching).
+#[ $a == z* ]     # File globbing and word splitting take place.
+#[ "$a" == "z*" ] # True if $a is equal to z* (literal matching).
+# Thanks, Stéphane Chazelas
+
+#for file in "${TFDIR}/*"; do
+for DIR in ${TF_FILES} ${NCNN_FILES} ${CAFFE_FILES} ${CAFFE2_FILES} ${TFLITE_FILES}; do
+    echo "dir is ${DIR}"
+    for file in ${DIR}; do
+        result_file="${file#${NCNNDIR}/}"
+        if [[ ${result_file} == *"cpu"* ]]; then
+            echo "cpu load : ${result_file}"
+        elif [[ ${result_file} == *"dummy"* ]]; then
+            echo "dummy : ${result_file}"
+        else
+            echo "bench : ${result_file}"
+            cat ${file} >> net_results.txt
+        fi
+    done
+done
+

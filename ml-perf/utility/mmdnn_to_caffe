@@ -1,0 +1,123 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+
+# $1 = network
+# $2 = source format
+
+download ()
+{
+    echo -n "MMdnn : Downloading model file"
+    mmdownload -f tensorflow \
+               -o ${STAGING_CONVERSION}/ \
+               -n ${network}
+}
+
+tensorflow_to_caffe ()
+{
+    download
+    case "${network}" in
+    (resnet_v2_200)
+        ;;
+    (resnet_v1_50)
+        ;;
+    (resnet_v1_152)
+        ;;
+    (resnet_v2_50)
+        ;;
+    (vgg19)
+        mmtoir -f tensorflow \
+               -d ${STAGING_CONVERSION}/vgg19 \
+               -n ${STAGING_CONVERSION}/imagenet_vgg19.ckpt.meta \
+               -w ${STAGING_CONVERSION}/imagenet_vgg19.ckpt \
+               --dstNodeName MMdnn_Output
+
+        echo -n "MMdnn : Caffe Code generation"
+        mmtocode -f caffe \
+                 -n ${STAGING_CONVERSION}/vgg19.pb \
+                 --IRWeightPath ${STAGING_CONVERSION}/vgg19.npy \
+                 --dstModelPath ${STAGING_CONVERSION}/caffe_vgg19.py \
+                 -dw ${STAGING_CONVERSION}/caffe_vgg19.npy
+
+        echo -n "MMdnn : Caffe model file"
+        mmtomodel -f caffe \
+                  -in ${STAGING_CONVERSION}/caffe_vgg19.py \
+                  -iw ${STAGING_CONVERSION}/caffe_vgg19.npy \
+                  --o ${STAGING_CONVERSION}/deploy
+        ;;
+    (vgg16)
+        mmtoir -f tensorflow \
+               -d ${STAGING_CONVERSION}/vgg16 \
+               -n ${STAGING_CONVERSION}/imagenet_vgg16.ckpt.meta \
+               -w ${STAGING_CONVERSION}/imagenet_vgg16.ckpt \
+               --dstNodeName MMdnn_Output
+
+        echo -n "MMdnn : Caffe Code generation"
+        mmtocode -f caffe \
+                 -n ${STAGING_CONVERSION}/vgg16.pb \
+                 --IRWeightPath ${STAGING_CONVERSION}/vgg16.npy \
+                 --dstModelPath ${STAGING_CONVERSION}/caffe_vgg16.py \
+                 -dw ${STAGING_CONVERSION}/caffe_vgg16.npy
+
+        echo -n "MMdnn : Caffe model file"
+        mmtomodel -f caffe \
+                  -in ${STAGING_CONVERSION}/caffe_vgg16.py \
+                  -iw ${STAGING_CONVERSION}/caffe_vgg16.npy \
+                  --o ${STAGING_CONVERSION}/deploy
+        ;;
+    (inception_v3)
+        ;;
+    (inception_v1)
+        ;;
+    (inception_v3_frozen)
+        ;;
+    (inception_v1_frozen)
+        ;;
+    (inception_resnet_v2)
+        ;;
+    (mobilenet_v1_1.0)
+        ;;
+    (mobilenet_v1_1.0_frozen)
+        ;;
+    (mobilenet_v2_1.0_224)
+        ;;
+    (nasnet-a_large)
+        ;;
+    esac
+}
+
+# $1 holds the name of the network
+# =================================
+network="${1}"
+
+# $2 holds the model format name of the source
+# =============================================
+source_format="${2}"
+
+case "${source_format}" in
+(Tensorflow)
+    tensorflow_to_caffe
+    echo "0"
+    ;;
+(Tensorflow-lite)
+    echo "1"
+    ;;
+(Caffe2)
+    echo "1"
+    ;;
+(NCNN)
+    echo "1"
+    ;;
+(ONNX)
+    echo "1"
+    ;;
+(NNEF)
+    echo "1"
+    ;;
+(Darknet)
+    darknet_to_caffe
+    echo "0"
+    ;;
+esac
+
+return

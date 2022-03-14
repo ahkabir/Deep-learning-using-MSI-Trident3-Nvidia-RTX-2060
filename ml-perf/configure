@@ -1,0 +1,141 @@
+#!/bin/sh
+# General definitions
+#--------------------
+
+# Binaries
+#----------
+WGET=/usr/bin/wget
+export WGET
+
+TASKSET=/usr/bin/taskset
+export TASKSET
+
+# Important path definitions
+#-----------------------------
+# This is the path where the repository was cloned
+SCRIPTPATH="/home/ahsan/ml-perf"
+export SCRIPTPATH
+
+# Top directory
+WORKDIR=${SCRIPTPATH}
+export WORKDIR
+
+# Staging directory is needed when model files
+# are fetched from remote server or when the model
+# file is obtained from the web. If we obtain model
+# file in the native format that goes to staging_native
+# directory, otherwise it goes to staging_conversion
+# directory
+STAGING_NATIVE=${SCRIPTPATH}/staging_native
+export STAGING_NATIVE
+
+STAGING_CONVERSION=${SCRIPTPATH}/staging_conversion
+export STAGING_CONVERSION
+
+# This is the directory where framework specific anlayzer script can be found.
+ANALYZEDIR=${SCRIPTPATH}/analyze
+export ANALYZEDIR
+
+# Caching the model file is not implemented yet and this directory
+# is not currently being used. In the future it will be
+MODELDIR="${SCRIPTPATH}/.cache/models"
+export MODELDIR
+
+# When a benchmark runs the results are stored in this directory
+RESULTDIR="${SCRIPTPATH}/.cache/results"
+export RESULTDIR
+
+# This is the directory where all misc. scripts could be found
+UTILDIR="${SCRIPTPATH}/utility"
+export UTILDIR
+
+# Caffe related definitions
+#---------------------------
+CAFFE_DIR="/home/ahsan/caffe/caffe"
+export CAFFE_DIR
+
+CAFFE_TOOLS="${CAFFE_DIR}/build/tools"
+export CAFFE_TOOLS
+
+CAFFE_BENCH="${CAFFE_DIR}/build/tools"
+export CAFFE_BENCH
+
+# NCNN related definitions
+#--------------------------
+# NCNN home : where ncnn remote repository is cloned
+NCNN_DIR="/home/ahsan/ncnn"
+export NCNN_DIR
+
+# NCNN tools directory
+NCNN_TOOLS_DIR="/home/ahsan/ncnn/tools"
+export NCNN_TOOLS_DIR
+
+# NCNN build sub-directory for tools
+NCNN_TOOLS_BUILD_DIR="${NCNN_TOOLS_DIR}/build"
+export NCNN_TOOLS_BUILD_DIR
+
+# NCNN benchmark directory
+NCNN_BENCH_DIR="/home/ahsan/ncnn/benchmark"
+export NCNN_BENCH_DIR
+
+# NCNN model directory. The NCNN benchmark code is written
+# such that the generated binary benchncnn and the param files
+# for networks should be in same directory
+NCNN_MODEL_DIR="/home/ahsan/ncnn/benchmark"
+export NCNN_MODEL_DIR
+
+# NCNN caffe to NCNN conversion tool location
+NCNN_TOOL_CAFFE_NCNN="${NCNN_TOOLS_BUILD_DIR}/caffe"
+export NCNN_TOOL_CAFFE_NCNN
+
+# Tensorflow related definitions
+#--------------------------------
+# Tensorflow home : where tensorflow remote repository is cloned
+TENSORFLOW_DIR="/home/ahsan/tensorflow"
+export TENSORFLOW_DIR
+
+TENSORFLOW_BENCH_DIR="/home/ahsan/tensorflow/bazel-bin/tensorflow/tools/benchmark"
+export TENSORFLOW_BENCH_DIR
+
+# Tensorflow-lite related definitions
+#-------------------------------------
+TENSORFLOW_LITE_BENCH_DIR="/home/ahsan/tensorflow/bazel-bin/tensorflow/contrib/lite/tools/benchmark"
+export TENSORFLOW_LITE_BENCH_DIR
+
+# Caffe2 related definitions
+#-----------------------------
+CAFFE2_BENCH_DIR="/home/ahsan/pytorch/caffe2/python"
+export CAFFE2_BENCH_DIR
+
+
+# Core scaling related definition
+#-------------------------------
+NUM_CORE_1="--cpu-list 1"
+export NUM_CORE_1
+
+NUM_CORE_2="--cpu-list 1,2"
+export NUM_CORE_2
+
+NUM_CORE_3="--cpu-list 1,2,3"
+export NUM_CORE_3
+
+NUM_CORE_4="--cpu-list 1,2,3,4"
+export NUM_CORE_4
+
+NUM_CORE_5="--cpu-list 1,2,3,4,5"
+export NUM_CORE_5
+
+NUM_CORE_6="--cpu-list 1,2,3,4,5,6"
+export NUM_CORE_6
+
+NUM_CORE_7="--cpu-list 1,2,3,4,5,6,7"
+export NUM_CORE_7
+
+NUM_CORE_8="--cpu-list 0,1,2,3,4,5,6,7"
+export NUM_CORE_8
+
+TOTAL_CORES=$(grep -c ^processor /proc/cpuinfo)
+export TOTAL_CORES
+
+TIME_NOW=`date '+%Y_%m_%d__%H_%M_%S'`
+export TIME_NOW

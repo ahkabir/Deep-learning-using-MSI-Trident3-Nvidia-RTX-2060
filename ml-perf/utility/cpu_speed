@@ -1,0 +1,6 @@
+#!/bin/sh
+lscpu | grep "max MHz" | while read LINE; do
+    set -- ${LINE}
+    echo "${4}"
+done
+

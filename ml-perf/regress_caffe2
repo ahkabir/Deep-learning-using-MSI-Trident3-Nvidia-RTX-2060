@@ -1,0 +1,21 @@
+#!/bin/sh
+#Caffe2
+#======
+#monoshot
+./ml_benchmark --framework=Caffe2 \
+               --bench_type=monoshot \
+               --model_format=Caffe2 \
+               --meta_data=AlexNet
+
+#core_scale
+./ml_benchmark --framework=Caffe2 \
+               --bench_type=core_scale \
+               --model_format=Caffe2 \
+               --meta_data=AlexNet
+
+#batch_scale
+./ml_benchmark --framework=Caffe2 \
+               --bench_type=batch_scale \
+               --model_format=Caffe2 \
+               --meta_data=AlexNet \
+               --batch_size=1:30:10

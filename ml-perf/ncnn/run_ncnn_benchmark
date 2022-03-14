@@ -1,0 +1,312 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+
+pre_clean ()
+{
+    # check whether temp result file exists
+    if [ -e "${RESULTDIR}/tmp.txt" ]; then
+        rm "${RESULTDIR}/tmp.txt"
+    fi
+    if [ -e "${RESULTDIR}/bench_report.txt" ]; then
+        rm "${RESULTDIR}/bench_report.txt"
+    fi
+}
+
+post_clean ()
+{
+    # remove the intermediate result files
+    if [ -e "${RESULTDIR}/tmp.txt" ]; then
+        rm "${RESULTDIR}/tmp.txt"
+    fi
+    if [ -e "${RESULTDIR}/bench_report.txt" ]; then
+        rm "${RESULTDIR}/bench_report.txt"
+    fi
+    if [ -e "${RESULTDIR}/side_band_info.txt" ]; then
+        rm "${RESULTDIR}/side_band_info.txt"
+    fi
+
+}
+
+run_scaling_wrt_shape ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    cp ${NCNN_BENCH_DIR}/alexnet.param ${NCNN_BENCH_DIR}/alexnet.param.orig
+    new_line="Input            data             0 1 data 0=${xdim} 1=${ydim} 2=${channel}"
+    sed -i "3s/.*/${new_line}/g" ${NCNN_BENCH_DIR}/alexnet.param
+
+    ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time} &
+    pid=$!
+    ${NCNN_BENCH_DIR}/benchncnn \
+           -l ${loop} \
+           -t ${thread} \
+           -p ${power} \
+           -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+    wait 
+    cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time})
+    echo "shape = ${xdim}:${ydim}:${channel} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+    rm ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time}
+
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt \
+        ${thread} \
+        "${start}:${end}:${step}" \
+        "${xdim}:${ydim}:${channel}"
+
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cp ${NCNN_BENCH_DIR}/alexnet.param.orig ${NCNN_BENCH_DIR}/alexnet.param
+    post_clean
+}
+
+run_scaling_wrt_batch ()
+{
+    echo "NCNN does not supporting batching for inferencing"
+    echo "https://github.com/Tencent/ncnn/issues/234"
+    echo "error : exiting performance measurement test"
+    exit 1
+
+    # for future when batching is going to be supported
+    pre_clean
+    time=${TIME_NOW}
+    cp ${NCNN_BENCH_DIR}/alexnet.param ${NCNN_BENCH_DIR}/alexnet.param.orig
+    for i in $(seq ${start} ${step} ${end})
+    do
+        echo "i or batch is ${i}"
+        new_line="Input            data             0 ${i} data 0=227 1=227 2=3"
+        echo "${new_line}"
+        sed -i "3s/.*/${new_line}/g" ${NCNN_BENCH_DIR}/alexnet.param
+        cat ${NCNN_BENCH_DIR}/alexnet.param
+        ${NCNN_BENCH_DIR}/benchncnn \
+               -l ${loop} \
+               -t ${thread} \
+               -p ${power} \
+               -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+    done
+    # update the final result file
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt \
+        ${thread} \
+        "${start}:${end}:${step}"
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cp ${NCNN_BENCH_DIR}/alexnet.param.orig ${NCNN_BENCH_DIR}/alexnet.param
+    post_clean
+}
+
+run_monoshot ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time} &
+    pid=$!
+    ${NCNN_BENCH_DIR}/benchncnn \
+           -l ${loop} \
+           -t ${thread} \
+           -p ${power} \
+           -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+    wait $pid
+    cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time})
+    echo "cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+    # update the final result file
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt
+        
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+run_scaling_wrt_core_thread ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    for k in $(seq 1 ${TOTAL_CORES})
+    do
+        var="NUM_CORE_"${k}
+        eval cpu_mask="\$$var"
+        for j in $(seq 1 ${thread})
+        do
+            ${UTILDIR}/cpu_load 1 600 ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time} &
+            pid=$!
+            ${TASKSET} ${cpu_mask} ${NCNN_BENCH_DIR}/benchncnn \
+                   -l ${loop} \
+                   -t ${j} \
+                   -p ${power} \
+                   -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+            if [ "$?" != "0" ]; then
+                echo "FAILED"
+                return
+            fi
+            wait
+            cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time})
+            echo "#core = ${k} #thread = ${j} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+            rm ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time}
+        done
+    done
+    # update the final result file
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt \
+        ${thread}
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+run_scaling_wrt_core ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    for k in $(seq 1 ${TOTAL_CORES})
+    do
+        var="NUM_CORE_"${k}
+        eval cpu_mask="\$$var"
+        ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time} &
+        pid=$!
+        ${TASKSET} ${cpu_mask} ${NCNN_BENCH_DIR}/benchncnn \
+                   -l ${loop} \
+                   -t ${thread} \
+                   -p ${power} \
+                   -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt
+        if [ "$?" != "0" ]; then
+            echo "FAILED"
+            return
+        fi
+        wait
+        cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time})
+        echo "#core = ${k} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+        rm ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time}
+    done
+    # update the final result file
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt
+        
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+run_scaling_wrt_thread ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    for k in $(seq 1 ${thread})
+    do
+        ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time} &
+        pid=$!
+        ${NCNN_BENCH_DIR}/benchncnn \
+                   -l ${loop} \
+                   -t ${k} \
+                   -p ${power} \
+                   -n ${network} 2>&1 | tee -a ${RESULTDIR}/tmp.txt
+        if [ "$?" != "0" ]; then
+            echo "FAILED"
+            return
+        fi
+        wait
+        cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/ncnn/cpu_load_${network}_${benchmark_type}.${time})
+        echo "#thread = ${k} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+    done
+    # update the final result file
+    ${ANALYZEDIR}/ncnn/ncnn_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt
+        ${thread}
+        
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/ncnn/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+# $1 holds benchmark type
+# =======================
+benchmark_type=${1}
+
+# $2 holds metadata for all bench_types
+# =====================================
+loop=$(echo "${2}"| cut -d: -f1)
+thread=$(echo "${2}"| cut -d: -f2)
+power=$(echo "${2}"| cut -d: -f3)
+network=$(echo "${2}"| cut -d: -f4)
+echo "loop is ${loop}"
+echo "thread is ${thread}"
+echo "loop is ${thread}"
+
+case "${benchmark_type}" in
+(batch_scale)
+    # $3 holds batch sizes for batch_scale
+    # =====================================
+    echo "batch size validation should be done by each ML framework"
+    start=$(echo "${3}"| cut -d: -f1)
+    end=$(echo "${3}"| cut -d: -f2)
+    step=$(echo "${3}"| cut -d: -f3)
+    echo "start is ${start}"
+    echo "end is ${end}"
+    echo "step is ${step}"
+    ;;
+(shape_scale)
+    # $3 hold auxillary data (shape)
+    # ==============================
+    # the fields are saved in vars because later when we
+    # invoke function for each bench type we don't have
+    # to pass args. If we don't save the args in variables
+    # then inside the function the positional arguments will
+    # all be zero
+    xdim=$(echo "${3}"| cut -d: -f1)
+    ydim=$(echo "${3}"| cut -d: -f2)
+    channel=$(echo "${3}"| cut -d: -f3)
+    echo "xdim is ${xdim}"
+    echo "ydim is ${ydim}"
+    echo "channel is ${channel}"
+    ;;
+esac
+
+# Change to NCNN benchmark directory
+echo "ncnn bench dir is ${NCNN_BENCH_DIR}"
+cd ${NCNN_BENCH_DIR}
+
+# Invoke the right benchmark type
+if [ "${benchmark_type}" = "core_scale" ]; then
+    echo "Inferencing/s wrt core scaling"
+    run_scaling_wrt_core
+elif [ "${benchmark_type}" = "thread_scale" ]; then
+    echo "Inferencing/s wrt thread scaling" 
+    run_scaling_wrt_thread
+elif [ "${benchmark_type}" = "core_thread_scale" ]; then
+    echo "Inferencing/s wrt core and thread scaling" 
+    run_scaling_wrt_core_thread
+elif [ "${benchmark_type}" = "batch_scale" ]; then
+    echo "Inferencing/s wrt batch scaling" 
+    run_scaling_wrt_batch
+elif [ "${benchmark_type}" = "shape_scale" ]; then
+    echo "Inferencing/s wrt shape scaling" 
+    run_scaling_wrt_shape
+elif [ "${benchmark_type}" = "monoshot" ]; then
+    echo "Inferencing/s monoshot" 
+    run_monoshot
+else
+    echo "NCNN : unknown benchmark type selected"
+fi
+
+# Move back to parent directory
+cd ${WORKDIR}
+echo "SUCCESS"
+return

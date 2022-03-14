@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Note : in order to get memory related information in
+# Linux system one needs super-user permission. For that
+# reason we use sudo in the following. The downside to
+# this is that when sudo is being used this script itself
+# becomes interactive and would ask for user's password.
+# FIXME
+sudo lshw -short -C memory | grep DIMM | while read LINE; do
+    echo "${LINE}"
+done
+

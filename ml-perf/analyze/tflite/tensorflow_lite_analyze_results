@@ -1,0 +1,136 @@
+#!/bin/sh
+
+
+num_cores=1
+num_threads=0
+i=0
+
+network=$1
+benchmark_type=$2
+temp_file=$3
+out_file=$4
+
+parse_monoshot()
+{
+    printf "%-8s  %-8s  %-8s  %-8s\n" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- $LINE
+        if [ "${1}" = "Timings" ]; then
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            printf "%-8s  %-8s  %-8s  %-8s\n" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+        fi
+    done 
+}
+
+parse_core_scale ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "#cores" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${1}" = "Timings" ]; then
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_cores}" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+            num_cores=$((num_cores+1))
+        fi
+    done
+}
+
+parse_thread_scale ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "#thread" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${1}" = "Timings" ]; then
+            num_threads=$((num_threads+1))
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_threads}" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+        fi
+    done
+}
+
+parse_core_thread_scale ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "#cores" "#thread" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${1}" = "Timings" ]; then
+            num_threads=$((num_threads+1))
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s  %-8s\n" "${num_cores}" "${num_threads}" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+            if [ "${num_threads}" = "${thread}" ]; then
+                num_cores=$((num_cores+1))
+                num_threads=0
+            fi
+        fi
+    done
+}
+
+parse_batch ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "#batch" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${1}" = "Timings" ]; then
+            batch_count=$(($start+$i*$step))
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            i=$((i+1))
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "${batch_count}" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+        fi
+    done
+}
+
+parse_shape ()
+{
+    printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "#shape" "min" "max" "avg" "std" >> "${out_file}"
+    cat "${temp_file}" | while read LINE; do
+        set -- ${LINE}
+        if [ "${1}" = "Timings" ]; then
+            shape="${xdim}:${ydim}:${channel}"
+            min=$(echo "${6}"| cut -d= -f2)
+            max=$(echo "${7}"| cut -d= -f2)
+            avg=$(echo "${8}"| cut -d= -f2)
+            std=$(echo "${9}"| cut -d= -f2)
+            printf "%-8s  %-8s  %-8s  %-8s  %-8s\n" "${shape}" "${min}" "${max}" "${avg}" "${std}" >> "${out_file}"
+        fi
+    done
+}
+
+if [ "${benchmark_type}" = "core_scale" ]; then
+    parse_core_scale
+elif [ "${benchmark_type}" = "core_thread_scale" ]; then
+    thread="${5}"
+    parse_core_thread_scale
+elif [ "${benchmark_type}" = "thread_scale" ]; then
+    thread="${5}"
+    parse_thread_scale
+elif [ "${benchmark_type}" = "monoshot" ]; then
+    parse_monoshot
+elif [ "${benchmark_type}" = "batch_scale" ]; then
+    batch="${5}"
+    start=$(echo "${5}"|cut -d: -f1)
+    end=$(echo "${5}"|cut -d: -f2)
+    step=$(echo "${5}"|cut -d: -f3)
+    parse_batch
+elif [ "${benchmark_type}" = "shape_scale" ]; then
+    shape="${5}"
+    xdim=$(echo "${5}"| cut -d: -f1)
+    ydim=$(echo "${5}"| cut -d: -f2)
+    channel=$(echo "${5}"| cut -d: -f3)
+    echo "xdim=${xdim}, ydim=${ydim} channel=${channel}"
+    parse_shape
+fi

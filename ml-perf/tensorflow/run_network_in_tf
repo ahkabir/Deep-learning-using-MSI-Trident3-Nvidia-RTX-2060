@@ -1,0 +1,205 @@
+#!/bin/sh
+. $(dirname "$0")/../config
+show_usage()
+{
+cat<<EOF
+usage: run_network_in_tf [-n <network_name>] [-s <num_of_samples>] [-t <num_of_threads>] [-c <num_of_cores>] [-h]
+
+  Options:
+    -n <network_name>      Name of the network to test
+    -s <num_of_samples>    Number of samples
+    -t <num_of_threads>    Total number of threads to be used
+    -c <num_of_cores>      Total number of cores to be used
+    -h                     Display this help
+
+  Run TF benchmark model for a named network.
+
+  Supported network names are:
+     * alexnet
+     * googlenet
+     * lenet
+     * mobilenet
+     * vgg16
+  Notes about number of threads:
+     * 0        = TF picks up optimal thread count automatically
+     * non-zero = Any non zero values should be used based on the platform
+EOF
+}
+
+ZERO_CPU="0"
+ONE_CPU="1"
+TWO_CPU="1,2"
+THREE_CPU="1,2,3"
+FOUR_CPU="1,2,3,4"
+FIVE_CPU="1,2,3,4,5"
+SIX_CPU="1,2,3,4,5,6"
+SEVEN_CPU="1,2,3,4,5,6,7"
+EIGHT_CPU="0,1,2,3,4,5,6,7"
+
+alexnet()
+{
+    for k in $(seq 1 ${total_samples})
+    do
+        taskset --cpu-list ${cpu_list} ${RUNDIR}/tf/run_tf_benchmark \
+        -g ${MODELDIR}/tf/alexnet/alexnet.pb \
+        -i data \
+        -s 1,227,227,3 \
+        -t float \
+        -m ${total_threads} \
+        -o prob
+    done
+}
+
+
+googlenet()
+{
+    for k in $(seq 1 ${total_samples})
+    do
+        taskset --cpu-list ${cpu_list} ./run_tf_benchmark \
+        -g /home/ahsan/model_zoo/tensorflow_models/caffe/googlenet/googlenet.pb \
+        -i data \
+        -s 1,224,224,3 \
+        -t float \
+        -m ${total_threads} \
+        -o prob
+    done
+}
+
+lenet()
+{
+
+    for k in $(seq 1 ${total_samples})
+    do
+    taskset --cpu-list ${cpu_list}  ./run_tf_benchmark \
+        -g /home/ahsan/model_zoo/tensorflow_models/lenet/lenet.pb \
+        -i Placeholder \
+        -s 1,32,32,1 \
+        -t float \
+        -m ${total_threads} \
+        -o fc3
+    done
+}
+
+
+mobilenet()
+{
+    for k in $(seq 1 ${total_samples})
+    do
+    taskset --cpu-list ${cpu_list} ./run_tf_benchmark \
+        -g /home/ahsan/model_zoo/tensorflow_models/tf_model_site/mobilenet/mobilenet_v1_1.0_224_frozen.pb \
+        -i input \
+        -s 1,224,224,3 \
+        -t float \
+        -m ${total_threads} \
+        -o MobilenetV1/Predictions/Reshape_1
+    done
+}
+
+vgg16()
+{
+    for k in $(seq 1 ${total_samples})
+    do
+            taskset --cpu-list ${cpu_list} ./run_tf_benchmark \
+        -g /home/ahsan/model_zoo/tensorflow_models/caffe/vgg16/vgg16.pb \
+        -i input \
+        -s 1,224,224,3 \
+        -t float \
+        -m ${total_threads} \
+        -o prob
+    done
+}
+
+run()
+{
+    case "$network_name" in
+    (alexnet)
+        alexnet
+        return
+        ;;
+    (goolenet)
+        googlenet
+        return
+        ;;
+    (lenet)
+        lenet
+        return
+        ;;
+    (mobilelenet)
+        mobilenet
+        return
+        ;;
+    (vgg16)
+        vgg16
+        return
+        ;;
+    (*)
+        show_usage
+        echo "error: no match ${Option}" >&2
+        break;;
+    esac
+}
+
+set_cpu()
+{
+    case "$total_cpus" in
+    (0)
+        cpu_list=${ZERO_CPU}
+            break ;;
+    (1)
+        cpu_list=${ONE_CPU}
+            break ;;
+    (2)
+        cpu_list=${TWO_CPU}
+            break ;;
+    (3)
+        cpu_list=${THREE_CPU}
+            break ;;
+    (4)
+        cpu_list=${FOUR_CPU}
+            break ;;
+     (5)
+        cpu_list=${FIVE_CPU}
+            break ;;
+     (6)
+        cpu_list=${SIX_CPU}
+            break ;;
+     (7)
+        cpu_list=${SEVEN_CPU}
+            break ;;
+     (8)
+        cpu_list=${EIGHT_CPU}
+            break ;;
+     esac
+     return
+}
+
+while getopts ":n:s:t:c:h" Option
+do
+    case "$Option" in
+    (n)
+        network=1
+        network_name=${OPTARG}
+        ;;
+    (s)
+        sample=1
+        total_samples=${OPTARG}
+        ;;
+    (t)
+        thread=1
+        total_threads=${OPTARG}
+        ;;
+    (c)
+        cpu=1
+        total_cpus=${OPTARG}
+        ;;
+    (h|help) show_usage; exit;;
+    (*)
+        show_usage
+        echo "error: no match ${Option}" >&2
+        break;;
+    esac
+done
+shift $(($OPTIND -1))
+
+set_cpu
+run

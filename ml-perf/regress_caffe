@@ -1,0 +1,59 @@
+#!/bin/sh
+#Caffe
+#=====
+#All examples shown below are for local model files. Instead, "remote" or "URL"
+#file location can be used as follows:
+# --model_location=remote:user:password:server:/file_path
+# --model_location=URL:http://..../model_file
+
+#monoshot
+./ml_benchmark --framework=Caffe \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe --meta_data="8:alexnet"
+#core_scale
+./ml_benchmark --framework=Caffe \
+                --bench_type=core_scale \
+                --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+                --model_format=Caffe --meta_data="8:alexnet"
+
+#shape_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe \
+               --meta_data="8:alexnet" \
+               --aux_data=128:128:3
+#batch_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=batch_scale \
+               --model_location=local:/home/ahsan/caffe/caffe/models/bvlc_alexnet/deploy.prototxt \
+               --model_format=Caffe \
+               --meta_data="8:alexnet" \
+               --batch_size=32:96:32
+
+#monoshot; model conversion from tensorflow to caffe
+ ./ml_benchmark --framework=Caffe \
+                --bench_type=monoshot \
+                --model_format=Tensorflow \
+                --meta_data="8:vgg16"
+
+#core_scale; model conversion from tensorflow to caffe
+ ./ml_benchmark --framework=Caffe \
+                --bench_type=core_scale \
+                --model_format=Tensorflow \
+                --meta_data="8:vgg16"
+
+#shape_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=shape_scale \
+               --model_format=Tensorflow \
+               --meta_data="8:vgg16" \
+               --aux_data=128:128:3
+
+#batch_scale
+./ml_benchmark --framework=Caffe \
+               --bench_type=batch_scale \
+               --model_format=Tensorflow \
+               --meta_data="8:vgg16" \
+               --batch_size=32:96:32

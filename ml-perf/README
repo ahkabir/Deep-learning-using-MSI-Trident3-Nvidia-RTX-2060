@@ -1,0 +1,656 @@
+UNDER CONSTRUCTION
+
+
+MACHINE LEARNING benchmarking tool
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+***IMPORTANT start***
+Please checkout the regress file in this directory to understand
+how the commands work. The regress file could also be run as a
+regression script. It could be updated as per user's needs.
+***IMPORTANT end***
+
+1 INSTALLATION OF various ML frameworks binaries/sources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This git repository can be used in a system where the frameworks are
+succesfully installed. Docker image with all framework
+libraries and binaries will be supplied.
+
+
+1.1 Manual installation of ML frameworks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+User will install the frameworks based on the instructions provided in each
+ML framework's website.
+
+1.2 Docker images
+~~~~~~~~~~~~~~~~~
+TODO: The docker image, ml-frameworks, is created and will be pushed to
+docker registry at https://hub.docker.com/
+
+Note that this docker image is for x86 based system. Similar docker
+images will be created for ARM-based system in the future.
+
+
+1.2.1 Run existing ml-perf
+#cd /root/ml-perf
+#./ml_benchmark --help
+#./ml_benchmark --framework=NCNN \
+    --network=alexnet \
+    --bench_type=monoshot \
+    --model_location=local:/home/ahsan/alexnet.param \
+    --model_format=NCNN \
+    --batch_size=1:32:2 \
+    --meta_data=8:8:0 \
+    --aux_data=227:227:3
+
+2 ML model formats
+~~~~~~~~~~~~~~~~~~~
+The tool supports or will support the following model formats:
+    * Tensorflow
+    * Tensorflow-lite
+    * Caffe
+    * Caffe2
+    * ONNX
+    * NNEF
+    * Darknet
+
+3 ML frameworks
+~~~~~~~~~~~~~~~
+The tool supports or will support the following ML frameworks:
+    * NCNN
+    * Tensorflow
+    * Tensorflow-lite
+    * Caffe
+    * Caffe2
+    * ARM-NN
+    * ARM-ACL
+
+3.1 NCNN
+~~~~~~~~~
+3.1.1 Model formats
+~~~~~~~~~~~~~~~~~~~~
+NCNN model is defined in a text file. The file naming
+convention of the model file is network_name.param. For instance,
+for alexnet the model name is alexnet.param. When NCNN model
+is obtained from various source following things should be
+considered:
+    * Look at all the networks supported by NCNN and their
+      corresponding names. The model file obtained for a
+      network must match the network supported by NCNN plus
+      the model file name should be renamed to network_name.param
+      if it is not named that way.
+    * After obtaining the model file it is copied to the
+      ncnn/benchmark directory
+    * NCNN benchmark binary expects to see the ${network}.param
+      file in ncnn/benchmark directory. Currently, the benchmark
+      binary is fixed to process or accept the following param files.
+      (1) squeezenet.param
+      (2) mobilenet.param
+      (3) mobilenet_v2.param
+      (4) shufflenet.param
+      (5) googlenet.param
+      (6) resnet18.param
+      (7) alexnet.param
+      (8) vgg16.param
+      (9) squeezenet-ssd.param
+     (10) mobilenet-ssd.param
+     (11) mobilenet-yolo.param
+    * User may want to run other networks that are not in the list above.
+      In the NCNN benchmark code an non_standard.param support is provided.
+      That means to run a network that is not in the list, a valid param file
+      MUST be provided and the the param file needs to be renamed as
+      non_standard.param. It is the responsibility of the user to generate
+      a non_standard.param file to be used by the NCNN benchmark code.
+
+3.1.2 Model conversion
+~~~~~~~~~~~~~~~~~~~~~~~
+3.1.2.1 Caffe to NCNN
+~~~~~~~~~~~~~~~~~~~~~~
+Support available.
+Conversion from caffe format to NCNN is possible. This tool
+can be built from ncnn/tools directory. The tool is called
+caffe2ncnn. The utility script utility/convert_caffe_ncnn, is
+a wrapper around the caffe2ncnn tool. The convert_caffe_ncnn
+is launched the following way:
+#convert_caffe_ncnn deploy.prototxt bvlc_alexnet.caffemodel alexnet
+
+3.1.2.2 Darknet to NCNN
+~~~~~~~~~~~~~~~~~~~~~~~~
+Support not available.
+
+darknet2ncnn :
+Although an open-source tools exists that converts Darknet
+model format to NCNN format, there are run-time issues
+running this converter. This tool can be cloned from here:
+https://github.com/xiangweizeng/darknet2ncnn.git
+
+darknet:
+In addition to this it is also required to obtain darknet
+source code and to build it.
+https://github.com/pjreddie/darknet.git
+the darknet source tree has model files in darkent format
+ *.cfg
+ *.weights
+
+conversion error :
+using the darknet2ncnn tool following conversion was done
+
+#darknet2ncnn alexnet.cfg alexnet.weights alexnet.param alexnet.bin
+
+The alexnet.param, NCNN model file, it generated has errors related
+to layer naming etc. For instance, it defines DarknetActivation which
+is not recognized by NCNN.
+
+generated alexnet.param (with error):
+7767517
+23 23
+Input            data 0 1 data 0=227 1=227 2=3
+Convolution      conv_0 1 1 data conv_0 0=96 1=11 2=1 3=4 4=0 5=1 6=34848
+ReLU             conv_0_activation 1 1 conv_0 conv_0_activation 0=0.0
+Pooling          maxpool_1 1 1 conv_0_activation maxpool_1 0=0 1=3 2=2 3=0 5=1 13=0 14=1 15=1
+Convolution      conv_2 1 1 maxpool_1 conv_2 0=256 1=5 2=1 3=1 4=2 5=1 6=614400
+ReLU             conv_2_activation 1 1 conv_2 conv_2_activation 0=0.0
+Pooling          maxpool_3 1 1 conv_2_activation maxpool_3 0=0 1=3 2=2 3=0 5=1 13=0 14=1 15=1
+Convolution      conv_4 1 1 maxpool_3 conv_4 0=384 1=3 2=1 3=1 4=1 5=1 6=884736
+ReLU             conv_4_activation 1 1 conv_4 conv_4_activation 0=0.0
+Convolution      conv_5 1 1 conv_4_activation conv_5 0=384 1=3 2=1 3=1 4=1 5=1 6=1327104
+ReLU             conv_5_activation 1 1 conv_5 conv_5_activation 0=0.0
+Convolution      conv_6 1 1 conv_5_activation conv_6 0=256 1=3 2=1 3=1 4=1 5=1 6=884736
+ReLU             conv_6_activation 1 1 conv_6 conv_6_activation 0=0.0
+Pooling          maxpool_7 1 1 conv_6_activation maxpool_7 0=0 1=3 2=2 3=0 5=1 13=0 14=1 15=1
+InnerProduct     connected_8 1 1 maxpool_7 connected_8 0=4096 1=1 2=37748736
+ReLU             connected_8_activation 1 1 connected_8 connected_8_activation 0=0.0
+Dropout          dropout_9 1 1 connected_8_activation dropout_9
+InnerProduct     connected_10 1 1 dropout_9 connected_10 0=4096 1=1 2=16777216
+ReLU             connected_10_activation 1 1 connected_10 connected_10_activation 0=0.0
+Dropout          dropout_11 1 1 connected_10_activation dropout_11
+InnerProduct     connected_12 1 1 dropout_11 connected_12 0=1000 1=1 2=4096000
+DarknetActivation connected_12_activation 1 1 connected_12 connected_12_activation 0=3
+Softmax          softmax_13 1 1 connected_12_activation softmax_13 0=0
+
+3.1.2.3 Tensorflow to NCNN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Support not available.
+In ncnn/tools/tensorflow directory you are supposed to be able to build
+tensorflow2ncnn. But the build breaks due to protobuf library incompatibilities.
+
+3.1.2.4 Tensorflow-lite to NCNN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Support not available.
+There is no tool available that will convert Tensorflow-lite format to
+NCNN.
+
+3.1.2.5 ONNX to NCNN
+~~~~~~~~~~~~~~~~~~~~~
+Support not available.
+In ncnn/tools/onnx directory you are supposed to be able to build
+onnx2ncnn. But this tool ends up generating mal-formed param file for NCNN.
+
+3.1.2.5 NNEF to NCNN
+~~~~~~~~~~~~~~~~~~~~~
+Tools not available.
+
+3.1.3 Update the configure file before running
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Before you run the benchmark it is important to make sure that
+the variables set in the configure file is adjusted to your Linux system.
+Check all the paths in this file and adjust them as necessary.
+
+3.1.4 Run NCNN benchmark
+~~~~~~~~~~~~~~~~~~~~~~~~~
+3.1.4.1 Types
+~~~~~~~~~~~~~~
+Following benchmark types are defined in software:
+    * monoshot
+    * core_scale
+    * core_thread_scale
+    * batch_scale
+      batch scaling is not supported in NCNN
+    * shape_scale
+
+monoshot:
+@@@@@@@@@@@
+For this type only one iteration is run. Default thread count (=8) is
+used for this type. And there is no pinning of the workload to any specific
+Core or set of cores. For example,
+#./ml_benchmark --framework=NCNN \
+    --network=alexnet \
+    --bench_type=monoshot \
+    --model_location=local:/home/ahsan/alexnet.param \
+    --model_format=NCNN \
+    --batch_size=1:32:2 \
+    --meta_data=8:8:0 \
+    --aux_data=227:227:3
+
+core_scale:
+@@@@@@@@@@@
+For this type the keeping default thread count (=8), measurement is taken
+when one core is used, when two cores are used and so on up to total number
+of cores.
+#./ml_benchmark --framework=NCNN \
+    --network=alexnet \
+    --bench_type=core_scale \
+    --model_location=local:/home/ahsan/alexnet.param \
+    --model_format=NCNN \
+    --batch_size=1:32:2 \
+    --meta_data=8:8:0 \
+    --aux_data=227:227:3
+Note that for this type we also measure the cpu load using mpstat. The
+cpu loading data is saved ml-perf/.cache/results/cpu_load* file.
+
+core_thread_scale:
+@@@@@@@@@@@@@@@@@@
+For this type the measurements are taken sweeping across core counts
+and thread counts. For a given cpu count (1 or 2 or...up to total cores),
+thread count is sweeped from 1-(total thread count given in --meta_data).
+The --meta_data has 3 fields, a:b:c, where a is the loop count, b is the
+thread count and c is whether or not powersave feature is enabled or disabled.
+#./ml_benchmark --framework=NCNN \
+    --network=alexnet \
+    --bench_type=core_thread_scale \
+    --model_location=local:/home/ahsan/alexnet.param \
+    --model_format=NCNN \
+    --batch_size=1:32:2 \
+    --meta_data=8:8:0 \
+    --aux_data=227:227:3
+Note that for this type we also measure the cpu load using mpstat. The
+cpu loading data is saved ml-perf/.cache/results/cpu_load* file.
+
+batch_scale:
+@@@@@@@@@@@@@
+Batching is not supported for NCNN inferencing. Check the following link where
+the issue is described:
+https://github.com/Tencent/ncnn/issues/234
+
+shape_scale:
+@@@@@@@@@@@@@
+For this type user provides the shape using --aux_data option. The --aux_data
+has 3 fields a:b:c, where a is the dimension along x-axis, b is the dimension
+along y-axis and c is the number of channel (for RGB the channel count is 3).
+#./ml_benchmark --framework=NCNN \
+    --network=alexnet \
+    --bench_type=shape_scale \
+    --model_location=local:/home/ahsan/alexnet.param \
+    --model_format=NCNN \
+    --batch_size=1:32:2 \
+    --meta_data=8:8:0 \
+    --aux_data=24:24:3
+
+3.2 Caffe
+~~~~~~~~~~
+Caffe benchmark is run using the caffe binary with time option (./caffe time ...).
+The binary is located at ~/caffe/build/tools/caffe. The corresponding source
+code is located in ~/caffe/tools/caffe.cpp.
+
+3.2.1 Model Formats
+~~~~~~~~~~~~~~~~~~~~
+Caffe model for inference is typically defined in deploy.prototxt model file.
+That's the format of the Caffe model. It's a text file following protobuf
+formatting style. It is assumed that all model files are named deploy.prototxt
+
+3.2.2 Model conversion
+~~~~~~~~~~~~~~~~~~~~~~~
+MMdnn tools are used to do conversion of tensorflow and darknet models into
+caffe format. The script, mmdnn_to_caffe, uses all the tools of MMdnn to
+convert tensorflow and darknet model files to caffe's deploy.prototxt file.
+
+In order to trigger model conversion the --framework should be different than
+--model_format. For instance,
+...--framework=Caffe --model_format=Tensorflow --meta_data="8:vgg16"...
+The line above shows part of the full command to run the caffe benchmark. It
+describes that the Caffe framework's benchmark is going to run and the program
+will accept Tensorflow model format for vgg16 network. As a result of this
+mmdnn_to_caffe script is triggered which downloads, converts tensorflow model
+into caffe model and deploy.prototxt is the name provided of the caffe model.
+
+3.2 Tensorflow
+~~~~~~~~~~~~~~~~
+Tensorflow (TF) benchmark is run using benchmark_model binary. It can be built
+from TF's source repository. This executable takes any model file for
+inferencing in native (protobuf) format. Various options are provided the
+executable as can be seen in the regress file. Also some descriptions related
+to command line for Tensorflow is shown in this README.
+
+3.3 Command line options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+There is a help command for this ML benchmarking tool which shows the command
+syntax to be used with good descriptions for most options. Here we further
+clarify some command options.
+
+--model_location:
+@@@@@@@@@@@@@@@@@@
+This options can have either of the 3 following syntax:
+(1)
+--model_location=local:/home/ahsan/alexnet.param:
+This means that the model file is located in the system where the script is
+being run.
+(2)
+--model_location=remote:mahshev:ahsan:any:/home/ahsan/alexnet.param
+This means with user name ahsan and password any the alexnet.param file
+will be copied using scp from server mahshev
+(3)
+--model_location=URL:http://dl.caffe.berkeleyvision.org/bvlc_alexnet.caffemodel
+This means the file will be fetched from the link provided using wget.
+FIXME_1: If we fetch caffemodel from web then we need two files. The caffemodel
+file and deploy.prototxt file. But we have provided options for only one
+URL.
+
+3.2.4.3 Results
+~~~~~~~~~~~~~~~~
+When a benchmark is run results are saved after parsing in .cache/results
+directory. The main result file has the following syntax:
+<network_name>_<benchmark_type>_${TIME_NOW}
+In addition if monoshot or core_scale or core_thread_scale benchmark type
+is run then it also computes the CPU loading when the workload runs and saves
+the sampled values in this file cpu_load_<network_name>_<benchmark_type>_${TIME_NOW}
+
+3.2.4.4 Performance metrics
+Following performance metrics are successfully generated by ML benchmarking
+tool. It used couple of utility scripts located under ml-perf/utility directory.
+* Detected target information
+* CLI options and parameters
+* Inference engine version
+* Inference latency
+* Inference throughput vs shape
+* CPU utilization
+
+3.2.4.5 TODOs
+~~~~~~~~~~~~~~
+(1) Add script to compute NCNN model complexity
+(2) Follow the open-source tools and determine when they
+    can be used succesfully to do model conversion from
+    Tensorflow, Darknet, ONNX
+(3) Follow NCNN remote git repository to see when they support
+    batching for inferencing.
+
+4 Model Converter
+~~~~~~~~~~~~~~~~~
+4.1 MMdnn
+The MMdnn converter supports the following model formats
+and conversion among them.
+
+For the purposes of our requriements we are interested in
+the following formats:
+    * caffe
+    * tensorflow
+    * darknet
+
+In addition, the tool supports the following model formats
+as well.
+    * cntk
+    * mxnet
+    * pytorch
+    * coreml
+
+4.1.1 Tensorflow models
+List of all the model files (Tensorflow format) that can be obtained
+via mmdownload command.
+
+    * resnet_v2_200
+    * resnet_v1_50
+    * resnet_v1_152
+    * resnet_v2_50
+    * vgg19
+    * vgg16
+    * inception_v3
+    * inception_v1
+    * inception_v3_frozen
+    * inception_v1_frozen
+    * inception_resnet_v2
+    * mobilenet_v1_1.0
+    * mobilenet_v1_1.0_frozen
+    * mobilenet_v2_1.0_224
+    * nasnet-a_large
+
+4.1.2 Caffe models
+List of all the model files (caffe format) that can be obtained
+via mmdownload command.
+
+    * alexnet
+    * squeezenet
+    * resnet50
+    * resnet152
+    * resnet101
+    * inception_v1
+    * inception_v4
+    * vgg16
+    * vgg19
+    * voc-fcn32s
+    * voc-fcn16s
+    * xception
+    * voc-fcn8s
+
+4.1.3 Darknet models
+List of all the model files (darknet format) that can be obtained
+via mmdownload command.
+
+    * yolov3
+    * yolov2
+
+OSError: ./mmdnn/conversion/examples/darknet/libdarknet.so: cannot open shared object file:
+No such file or directory
+
+5 TODOs
+~~~~~~~~
+5.1 NCNN
+~~~~~~~~~
+(1) NCNN benchmark code (benchncnn.cpp) in ncnn/benchmark directory, accept
+    model files (*.param) for a limited number of networks. The code expects
+    the network name provided by the user with the code. Therefore, any
+    param file that is not named in the benchmark code will not be processed.
+    Code modification needs to be done in order to accept arbitrary param file
+    with any name.
+(2) Model conversion support needs to be provided once the tools mentioned above
+    get the necessary fixes.
+
+5.2 Caffe
+~~~~~~~~~
+(1) Weights and MACs performance metrics are not reported.
+    An appropriate tool is needed that will parse the deploy.prototxt
+    file and will be able to report the Weights and MACs values of
+    the model file.
+(2) For benchmark type core_scale, only average values of inference time
+    is reported this tool ${CAFFE_BENCH}/caffe. The caffe.cpp file located
+    in caffe/tools directory needs to be modified to provide support for this
+(3) The benchmark type core_thread_scale is not supported by the caffe
+    framework as it is single-threaded. Code changes are required to be able
+    to scale the benchmark code with respect to software thread count.
+(4) As for model conversion, the mmdnn tools are used. For caffe framework,
+    tensorflow model format was converted to caffe model. It was tested for
+    vgg19 and vgg16. The mmdnn_to_caffe script needs to be updated for other
+    networks.
+(5) When user provided model file is not in native format but could be converted
+    to native using mmdnn script, the generated deploy.prototxt layout for
+    input_layer becomes multi-line definitions as opposed to the deploy.prototxt
+    in caffe distribution. The batch_scale and shape_scale benchmark do not
+    work for the multi-line input layer definition. But shape_scale and batch_scale
+    work for caffe's original deploy.prototxt file. For the multi-line a complex
+    regex needs to be defined.
+
+5.3 Tensorflow
+~~~~~~~~~~~~~~~
+(1) Layer wise weights reporting support is not added yet. We need to find
+    an open-source tool to do that or write a small script on our own. The
+    bash script utility/consolidate_results (under development) has to be
+    updated to make is a fully functional script.
+    The built in benchmark executable provides total FLOPs count (static) plus
+    FLOPs/s (runtime) performance metrics.
+(2) The conversion of model format from external to native is not tested yet.
+    It will be added shortly.
+
+
+5.4 Tensorflow-lite
+~~~~~~~~~~~~~~~~~~~~
+(1) Total weights and per layer weights information is missing. We need to find
+    right kind of script to be able to generate such performance metrics.
+(2) For inferencing timing ONLY average timing information is provided by the
+    benchmarking binary. The benchmark code has to be updated to provide
+    support for adding min, max, std.
+(3) The conversion of model format from external to native is not tested yet.
+    It will be added shortly.
+
+5.2 Caffe2
+~~~~~~~~~~
+(1) Caffe2 benchmarking scripts are written in python. The network/model
+    is defined inside the script. Therefore, no external model file(s) is
+    needed. At this point, we haven't found any C++ benchmarking model
+    for Caffe2 which will be able to accept any model file as an input.
+(2) Only average inferencing timing is shown. The min, max and std need to
+    be added.
+(3) Shape scaling is not supported. We need to figure out how to do that.
+(4) The total weights and per layer weights are not supported.
+(5) The conversion of model format from external to native is not tested yet.
+    It will be added shortly. Caffe2 sources are inside pytorch repository.
+    They pytorch repository has a script called convert-onnx-to-caffe2 which
+    does model format conversion from onnx to caffe2. Similarly, it has
+    convert-caffe2-to-onnx which converts caffe2 to onnx.
+
+
+5.6 x86 docker image
+~~~~~~~~~~~~~~~~~~~~~
+(1) An x86 docker image is created with support for NCNN. Need to provide
+    support for Tensorflow, Tensorflow-lite, Caffe, Caffe2
+
+5.7 ARM docker image
+~~~~~~~~~~~~~~~~~~~~~
+(1) Need to find a  baseline ARM docker image.
+(2) Need to provide support for these frameworks - NCNN, Caffe, Caffe2,
+    Tensorflow, Tensorflow-lite.
+
+6 Recipe for adding new ML framework
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+(1) Build and install ML framework
+(2) Build the benchmarking code if it written in C++.
+(3) Update the "configure" file. Provide the path to the binaries for the
+    framework.
+(4) Update the show_usage() function description. Provide the --meta_data
+    syntax for this framework. Also update sections related to batch size
+    and shape size if applicable.
+(5) Review the command line syntax and add it additional options are required.
+(6) Update the run_benchmark_in_framework
+(7) Create a file similar to ./ml-perf/tensorflow/run_tensorflow_benchmark
+    in a new subdirectory under ml-perf. Look at the existing ML subdirectories.
+(8) Create an analyze script for the framework. This script parses the
+    ML benchmark output and extract the fields of interest. Check existing
+    examples/implementations.
+
+7 Recipe for adding new model/network
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+(1) For Tensorflow and Tensorflow-lite frameworks, adding new model/network
+    does not require any changes in the code base or script. So long a valid
+    pb model file (for Tensorflow) or tflite model file (for Tensorflow-lite)
+    the benchmark executable will run the graph and will provide the latency
+    numbers.
+(2) For Caffe the benchmark executables requires a deploy.prototxt file
+    for the new network or model. No additional code changes needed in the
+    codebase.
+(3) For NCNN a param file needs to be provided for the new network. In addition,
+    the benchncnn.cpp file needs to be checked whether the name of the network
+    appears there. If not, for the new network a init API and a run API have
+    to be provided. Then the benchmark code of NCNN needs to be compiled.
+
+(4) For Caffe2, the networks are defined in the convnet_benchmarks.py script.
+    No model file is needed. If a new network is needed then the python
+    script needs to be updated.
+
+8 Tool's version
+~~~~~~~~~~~~~~~~~
+If you run utility/tools_version script it will shows the current version
+of the tool. The version for this commit is 0.1
+
+APPENDIX A.1
+~~~~~~~~~~~~~
+Model Zoo
+~~~~~~~~~~~~
+TF and TFLITE
+The pretrained model can be found from here:
+https://www.tensorflow.org/lite/models
+
+TF
+mobilenet v1
+resnet
+vgg16
+alexnet
+inception v1 (converter)
+inception v3 (converter)
+inception resnet v2
+
+
+TFLITE
+alexnet (regular+quantized)
+vgg16
+mobiblenet v1.1.0
+resnet
+
+http://caffe.berkeleyvision.org/model_zoo.html
+Hosting model info
+Github Gist is a good format for model info distribution because
+it can contain multiple files, is versionable, and has in-browser
+syntax highlighting and markdown rendering.
+scripts/upload_model_to_gist.sh <dirname> uploads non-binary
+files in the model directory as a Github Gist and prints the
+Gist ID. If gist_id is already part of the <dirname>/readme.md
+frontmatter, then updates existing Gist.
+
+Try doing scripts/upload_model_to_gist.sh models/bvlc_alexnet
+to test the uploading (dont forget to delete the uploaded gist afterward).
+
+Downloading model info is done just as easily with
+scripts/download_model_from_gist.sh <gist_id> <dirname>.
+
+CAFFE
+    * alexnet
+    * squeezenet
+    * resnet50
+    * resnet152
+    * resnet101
+    * inception_v1
+    * inception_v4
+    * vgg16
+    * vgg19
+    * voc-fcn32s
+    * voc-fcn16s
+    * xception
+    * voc-fcn8s
+
+NCNN
+      (1) squeezenet.param
+      (2) mobilenet.param
+      (3) mobilenet_v2.param
+      (4) shufflenet.param
+      (5) googlenet.param
+      (6) resnet18.param
+      (7) alexnet.param
+      (8) vgg16.param
+      (9) squeezenet-ssd.param
+     (10) mobilenet-ssd.param
+     (11) mobilenet-yolo.param
+
+CAFFE2
+
+APPENDIX A.2
+~~~~~~~~~~~~~
+INSTALL DOCKER-CE
+My god, you found the cause! simply running sudo groupadd docker solved the whole issue :-o
+Thanks a lot @thaJeztah !!
+https://github.com/moby/moby/issues/29179
+
+A.2 cleanly uninstall docker image
+Uninstall Docker CE
+Uninstall the Docker CE package:
+
+$ sudo apt-get purge docker-ce
+Images, containers, volumes, or customized configuration files on your host are not automatically removed. To delete all
+images, containers, and volumes:
+
+$ sudo rm -rf /var/lib/docker
+
+
+docker prune images:
+sudo docker system prune
+
+How to get a summary of disk usage with du
+Date: 2008-02-02  |  Modified: 2008-09-07  |  Tags: linux, ubuntu  |  1 Comment
+The following command gives me a listing of the sizes of all the directories in my root directory.
+
+$ sudo du -chs /*
+

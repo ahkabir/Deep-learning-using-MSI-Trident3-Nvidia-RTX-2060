@@ -1,0 +1,14 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+# sample is taken after every INTERVAL second(s)
+INTERVAL="${1}"
+
+# NUM_TIMES samples are taken
+NUM_TIMES="${2}"
+
+# OUTPUT_FILE is the file where CPU loading information is saved
+OUTPUT_FILE="${3}"
+
+/usr/bin/mpstat -P ON ${INTERVAL} ${NUM_TIMES} >> ${OUTPUT_FILE} &
+

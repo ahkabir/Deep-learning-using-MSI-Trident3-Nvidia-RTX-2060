@@ -1,0 +1,48 @@
+Dependencies:
+##############
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+      build-essential \
+      git \
+      libgoogle-glog-dev \
+      libgtest-dev \
+      libiomp-dev \
+      libleveldb-dev \
+      liblmdb-dev \
+      libopencv-dev \
+      libopenmpi-dev \
+      libsnappy-dev \
+      libprotobuf-dev \
+      openmpi-bin \
+      openmpi-doc \
+      protobuf-compiler \
+      python-dev \
+      python-pip                          
+pip install --user \
+      future \
+      numpy \
+      protobuf \
+      typing \
+      hypothesis
+
+
+# for Ubuntu 14.04
+sudo apt-get install -y --no-install-recommends \
+      libgflags2 \
+      cmake3
+# for Ubuntu 16.04
+sudo apt-get install -y --no-install-recommends \
+      libgflags-dev \
+      cmake
+
+
+BUILD:
+#######
+git clone https://github.com/pytorch/pytorch.git && cd pytorch
+git submodule update --init --recursive
+sudo python setup.py install
+
+TEST CAFFE2 INSTALLATION:
+##########################
+cd ~ && python -c 'from caffe2.python import core' 2>/dev/null && echo "Success" || echo "Failure"
+

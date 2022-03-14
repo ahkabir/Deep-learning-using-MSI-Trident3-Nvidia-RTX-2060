@@ -1,0 +1,11 @@
+#!/bin/sh
+#Tensorflow
+#==========
+#batch_scale
+./ml_benchmark --framework=Tensorflow-lite \
+               --bench_type=batch_scale\
+               --model_location=local:/home/ahsan/model_zoo/tensorflow_lite_models/caffe/alexnet/alexnet.tflite \
+               --model_format=Tensorflow-lite \
+               --meta_data="data:1,227,227,3:alexnet" \
+               --batch_size=1:8:4
+

@@ -1,0 +1,174 @@
+#!/bin/sh
+[ -f "./configure" ] && . "./configure"
+[ -f "../configure" ] && . "../configure"
+
+pre_clean ()
+{
+    # check whether temp result file exists
+    if [ -e "${RESULTDIR}/tmp.txt" ]; then
+        rm "${RESULTDIR}/tmp.txt"
+    fi
+    if [ -e "${RESULTDIR}/bench_report.txt" ]; then
+        rm "${RESULTDIR}/bench_report.txt"
+    fi
+}
+
+post_clean ()
+{
+    # remove the intermediate result files
+    if [ -e "${RESULTDIR}/tmp.txt" ]; then
+        rm "${RESULTDIR}/tmp.txt"
+    fi
+    if [ -e "${RESULTDIR}/bench_report.txt" ]; then
+        rm "${RESULTDIR}/bench_report.txt"
+    fi
+    if [ -e "${RESULTDIR}/side_band_info.txt" ]; then
+        rm "${RESULTDIR}/side_band_info.txt"
+    fi
+
+}
+
+run_scaling_wrt_batch ()
+{
+    # for future when batching is going to be supported
+    pre_clean
+    time=${TIME_NOW}
+    if [ "${start}" = "1" ]; then
+        start="$((start-1))"
+    fi
+    for i in $(seq ${start} ${step} ${end})
+    do
+        ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time} &
+        pid=$!
+        if [ "${i}" = "0" ]; then
+            i="$((i+1))"
+        fi
+        python ${CAFFE2_BENCH_DIR}/convnet_benchmarks.py \
+               --batch_size=${i} \
+               --model=${network} \
+               --cpu \
+               --forward_only True 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+        
+        wait
+        cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time})
+        echo "#batch = ${i} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+        rm ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time}
+    done
+    [ "${start}" = "0" ] && start="$((start+1))"
+    # update the final result file
+    ${ANALYZEDIR}/caffe2/caffe2_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt \
+        "${start}:${end}:${step}"
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+run_monoshot ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time} &
+    pid=$!
+    python ${CAFFE2_BENCH_DIR}/convnet_benchmarks.py \
+           --batch_size=1 \
+           --model=${network} \
+           --cpu \
+           --forward_only True 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+    
+    wait
+    cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time})
+    echo "cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+    rm ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time}
+    # update the final result file
+    ${ANALYZEDIR}/caffe2/caffe2_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt
+        
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+run_scaling_wrt_core ()
+{
+    pre_clean
+    time=${TIME_NOW}
+    for k in $(seq 1 ${TOTAL_CORES})
+    do
+        var="NUM_CORE_"${k}
+        eval cpu_mask="\$$var"
+        ${UTILDIR}/cpu_load 1 90 ${RESULTDIR}/caffe/cpu_load_${network}_${benchmark_type}.${time}
+        pid=$!
+        ${TASKSET} ${cpu_mask} python ${CAFFE2_BENCH_DIR}/convnet_benchmarks.py \
+           --batch_size=1 \
+           --model=${network} \
+           --cpu \
+           --forward_only True 2>&1 | tee -a ${RESULTDIR}/tmp.txt 
+        if [ "$?" != "0" ]; then
+            echo "FAILED"
+            return
+        fi
+        
+        wait
+        cpu_util=$(${UTILDIR}/parse_cpu_load   ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time})
+        echo "#core = ${k} cpu utilization = ${cpu_util}" >> ${RESULTDIR}/side_band_info.txt
+        rm ${RESULTDIR}/caffe2/cpu_load_${network}_${benchmark_type}.${time}
+    done
+    # update the final result file
+    ${ANALYZEDIR}/caffe2/caffe2_analyze_results \
+        ${network} \
+        ${benchmark_type} \
+        ${RESULTDIR}/tmp.txt \
+        ${RESULTDIR}/bench_report.txt
+        
+    cat ${RESULTDIR}/side_band_info.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    cat ${RESULTDIR}/bench_report.txt >> ${RESULTDIR}/caffe2/${network}_${benchmark_type}.${time}
+    post_clean
+}
+
+# $1 holds benchmark type
+# =======================
+benchmark_type=${1}
+
+# $2 holds metadata
+# =================
+network="${2}"
+
+case "${benchmark_type}" in
+(batch_scale)
+    # $3 holds batch sizes for batch_scale
+    # =====================================
+    echo "batch size validation should be done by each ML framework"
+    start=$(echo "${3}"| cut -d: -f1)
+    end=$(echo "${3}"| cut -d: -f2)
+    step=$(echo "${3}"| cut -d: -f3)
+    echo "start is ${start}"
+    echo "end is ${end}"
+    echo "step is ${step}"
+    ;;
+esac
+
+# Invoke the right benchmark type
+if [ "${benchmark_type}" = "core_scale" ]; then
+    echo "Inferencing/s wrt core scaling" 
+    run_scaling_wrt_core
+elif [ "${benchmark_type}" = "batch_scale" ]; then
+    echo "Inferencing/s wrt batch scaling" 
+    run_scaling_wrt_batch
+elif [ "${benchmark_type}" = "monoshot" ]; then
+    echo "Inferencing/s monoshot" 
+    run_monoshot
+else
+    echo "Caffe2 : unknown benchmark type selected"
+fi
+
+# Move back to parent directory
+cd ${WORKDIR}
+echo "SUCCESS"
+return

@@ -1,0 +1,275 @@
+#!/bin/sh
+
+#NCNN
+#====
+#All examples shown below are for local model files. Instead, "remote" or "URL"
+#file location can be used as follows:
+# --model_location=remote:user:password:server:/file_path
+# --model_location=URL:http://..../model_file
+
+
+###########
+# alexnet
+###########
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/alexnet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:alexnet" \
+               --aux_data="128:128:3"
+
+#############
+# squeezenet
+#############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/squeezenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/squeezenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/squeezenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet" \
+               --aux_data="128:128:3"
+
+#############
+# mobilenet
+#############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/mobilenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet" \
+               --aux_data="128:128:3"
+
+###############
+# mobilenet_v2
+###############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet_v2.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet_v2"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet_v2.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet_v2"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/mobilenet_v2.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet_v2" \
+               --aux_data="128:128:3"
+
+###############
+# googlenet
+###############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/googlenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:googlenet"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/googlenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:googlenet"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/googlenet.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:googlenet" \
+               --aux_data="128:128:3"
+
+###############
+# resnet18
+###############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/resnet18.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:resnet18"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/resnet18.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:resnet18"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/resnet18.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:resnet18" \
+               --aux_data="128:128:3"
+
+###############
+# vgg16
+###############
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/vgg16.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:vgg16"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/vgg16.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:vgg16"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/vgg16.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:vgg16" \
+               --aux_data="128:128:3"
+
+################
+# squeezenet-ssd
+################
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/squeezenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet-ssd"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/squeezenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet-ssd"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/squeezenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:squeezenet-ssd" \
+               --aux_data="128:128:3"
+
+################
+# mobilenet-ssd
+################
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-ssd"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-ssd"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/mobilenet-ssd.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-ssd" \
+               --aux_data="128:128:3"
+
+################
+# mobilenet-yolo
+################
+#monoshot
+./ml_benchmark --framework=NCNN \
+               --bench_type=monoshot \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet-yolo.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-yolo"
+#core_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=core_scale \
+               --model_location=local:/home/ahsan/ncnn/benchmark/mobilenet-yolo.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-yolo"
+
+#batch_scale (not supported)
+
+#shape_scale
+./ml_benchmark --framework=NCNN \
+               --bench_type=shape_scale \
+               --model_location=local:/home/ahsan/mobilenet-yolo.param \
+               --model_format=NCNN \
+               --meta_data="8:8:0:mobilenet-yolo" \
+               --aux_data="128:128:3"
+
+
+
+
+
+

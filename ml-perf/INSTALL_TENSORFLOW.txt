@@ -1,0 +1,27 @@
+bazel 0.19.0 (non-git => zip file)
+tensorflow 1.12.0
+
+
+patch 1:
+~~~~~~~~
+configure.py:
+check_bazel_version('0.15.0')
+reset_tf_configure_bazelrc()
++# Explicitly import tools/bazel.rc, this is needed for Bazel 0.19.0 or later
++write_to_bazelrc('import %workspace%/tools/bazel.rc')
+
+cleanup_makefile()
+setup_python(environ_cp)
+
+install the following:
+~~~~~~~~~~~~~~~~~~~~~~
+apt-get install libc-ares-dev
+pip install keras_applications
+pip install keras_preprocessing
+pip install mock
+
+common error messages:
+(1)
+ImportError: No module named keras_applications
+https://github.com/bazelbuild/continuous-integration/issues/305
+

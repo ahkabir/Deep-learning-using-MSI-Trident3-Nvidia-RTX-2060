@@ -1,0 +1,893 @@
+#!/bin/sh
+
+[ -f "./configure" ] && . "./configure"
+
+#============================================
+# DEFAULT values of configuration parameters
+#============================================
+default_framework=NCNN
+default_network=alexnet
+default_model_location=cache
+default_model_format=NCNN
+
+#loop_count=8, thread_count=8, powersave=0
+default_meta_data=8:8:0
+default_batch_size=1:8:2
+default_aux_data=224:224:3
+
+show_default ()
+{
+    if [ -z "${1}" ]; then
+        echo "(no default)"
+    else
+        echo "(default '$1')"
+    fi
+}
+
+show_usage ()
+{
+cat<<EOF
+usage: ml_benchmark [options]
+
+   Options:
+    -h|--help this help
+    --framework[=framework name] $(show_default $default_framework)
+    --bench_type[=core_scale|core_thread_scale|batch_scale|shape_scale|monoshot|thread_scale]
+    --model_location[=local|remote|URL] $(show_default $default_model_location)
+    --model_format[=Tensorflow|Tensorflow-lite|Caffe|Caffe2|ONNX|NNEF|Darknet|NCNN] $(show_default $default_model_format)
+    --batch_size[=start:end:size] $(show_default $default_batch_size)
+    --meta_data[=a:b:...]
+    --aux_data[=xdim:ydim:channel]
+
+   Supported frameworks names are:
+     * Tensorflow
+     * Tensorflow-lite
+     * Caffe
+     * Caffe2
+     * NCNN
+     * ARM-ACL
+     * ARM-NN
+     * GLOW
+   Model location:
+     * argument to this options is one of the followings 
+     * --model_location=local:<model file name with full path>
+     * --model_location=remote:<server>:<user>:<password>:<model file name with full path of the remote>
+     * --model_location=URL1:URL2
+     *   for caffe to ncnn conversion URL1 is for deploy.prototxt and URL2 is for caffemodel
+     * note that for caffe2 this field is not needed, the network/model is defined
+       in the python script
+   Model format:
+     * Tensorflow
+     * Tensorflow-lite
+     * Caffe
+     * Caffe2
+     * NCNN
+     * ONNX
+     * NNEF
+     * Darknet
+   Benchmark type (--bench_type)
+     * Following types of benchmark are supported by all frameworks
+       monshot:
+         One single reading
+       core_scale:
+         Measurements taken sweeping across number of cores (taskset)
+       core_thread_scale
+         Measurements taken sweeping across both number of cores (taskset) and threads
+       batch_scale
+         Measurements taken while scale w.r.t. batch size
+       shape_scale
+         Measurements taken while scale w.r.t. shape
+     * In addition tensorflow supports the following type of benchmark
+       thread_scale
+         Measurements taken while scale w.r.t. number of threads leave core
+         count to system default
+   Metadata (--meta_data) [required]
+     * Metadata is framework specific. In the following we list all metadata
+       for all different types of ML frameworks.
+     * NCNN:
+       loop:thread:power:network
+       loop    = how many iteration of benchmarking to run
+       thread  = how many threads to use to run the workload
+       power   = NCNN has power saving feature available for mobile devices. 
+                 when assigned a value 0 it is disabled, otherwise if it holds
+                 a value of 1 it is enabled.
+       network = name of the network to be run
+     * Caffe:
+       loop:network
+       loop         = how many iterations to run
+       network      = name of the network to be run
+     * Tensorflow:
+       monoshot/core_scale/batch_scale/shape_scale:
+           input_name:input_type:output_name:shape:network
+       core_thread_scale/thread_scale:
+           input_name:input_type:output_name:shape:network:thread_count
+
+       input_name    = input name of the pb file
+       input_type    = input type of the pb file
+       output_name   = output name of the pb file
+       shape         = comma separated 4-tuple a:b:c:d
+                     a : batch size
+                     b : x dimension
+                     c : y dimension
+                     d : total channels
+                     example : 1,227,227,3
+       network       = name of network to run
+     * Tensorflow-lite:
+       monoshot/core_scale/batch_scale/shape_scale:
+           input_name:shape:network
+       core_thread_scale/thread_scale:
+           input_name:shape:network:thread_count
+
+       input_name    = input name of the tflite file
+       shape         = comma separated 4-tuple a:b:c:d
+                     a : batch size
+                     b : x dimension
+                     c : y dimension
+                     d : total channels
+                     example : 1,227,227,3
+       network       = name of network to run
+     * Caffe2:
+       monoshot/core_scale/batch_scale:
+           network
+    Auxillary data (--aux_data) [optional or required]
+     * This option is not required when shape_scale is chosen as bench_type. Other
+       than this bench_type auxillary data is not needed.
+       Auxillary data is related to shape of the input. Most framework allows
+       changing the shape of the input either via the model file or via
+       command line and so on. Here are the framework depenedent fields of
+       aux_data
+     * NCNN:
+       xdim:ydim:channel
+       xdim = pixel dimension along x-axis
+       ydim = pixel dimension along y-axis
+       channel = number of channel(s). for example for monochrome picture
+                 channel number is 1 and for RGB picture it is 3
+     * Caffe:
+       xdim:ydim:channel
+       Description of the fields are same like NCNN.
+     * Tensorflow:
+       xdim:ydim:channel
+       Description of the fields are same like NCNN.
+     * Tensorflow-lite:
+       xdim:ydim:channel
+       Description of the fields are same like NCNN.
+    Batch size (--batch_size)
+      * Batch size is not required for all bench_type chosen. These fields are
+        used when bench_type is chosen as batch_scale AND when the ML framework
+        supports batching. For the frameworks which do not support batching
+        these fields are still required but ignored during processing.
+      * Batch size refers to how many input images are input to the forward
+        path of a network simulatenously. Batch size is framework dependent.
+        Some frameworks allow batch size whereas some don't. Here is the field
+        description of --batch_size when supported.
+        start:end:size
+      * NCNN
+        Batch size is not supported
+      * Caffe
+        start:end:step
+        start = starting batch size
+        end   = ending batch size
+        step  = increment by step in every iteration
+      * Tensorflow
+        Batch size is supported
+        Description of the fields are same like Caffe.
+      * Tensorflow-lite
+        Batch size is supported
+        Description of the fields are same like Caffe.
+      * Caffe2
+        Batch size is supported
+        Description of the fields are same like Caffe.
+
+   Ex 1: monoshot
+   ./ml_benchmark --framework=NCNN \\
+                  --bench_type=monoshot \\
+                  --model_location=local:path \\
+                  --model_format=<> \\
+                  --meta_data="8:8:0:alexnet"
+   Note that for monoshot --batch_size and --aux_data are not needed
+
+   Ex 2: core_scale
+   ./ml_benchmark --framework=NCNN \\
+                  --bench_type=core_scale \\
+                  --model_location=local:path \\
+                  --model_format=<> \\
+                  --meta_data="8:8:0:alexnet"
+   Note that for core_scale --batch_size and --aux_data are not needed
+
+   Ex 3: core_thread_scale
+   ./ml_benchmark --framework=NCNN \\
+                  --bench_type=core_thread_scale \\
+                  --model_location=local:path \\
+                  --model_format=<> \\
+                  --meta_data="8:8:0:alexnet"
+   Note that for core_thread_scale --batch_size and --aux_data are not needed
+
+   Ex 4: batch_scale
+   ./ml_benchmark --framework=NCNN \\
+                  --bench_type=batch_scale \\
+                  --model_location=local:path \\
+                  --model_format=<> \\
+                  --meta_data="8:8:0:alexnet" \\
+                  --batch_size="2:32:2"
+   Note that for batch_scale --aux_data is not needed
+
+   Ex 5: shape_scale
+   ./ml_benchmark --framework=NCNN \\
+                  --bench_type=shape_scale \\
+                  --model_location=local:path \\
+                  --model_format=<> \\
+                  --meta_data="8:8:0:alexnet" \\
+                  --aux_data
+   Note that for batch_scale --batch_size is not needed
+EOF
+}
+
+validate_framework ()
+{
+    if [ -z "${framework_name}" ]; then
+        framework_name=${default_framework}
+        echo Defaulting to --framework=NCNN
+    else
+        case "${framework_name}" in
+        (Tensorflow|Tensorflow-lite|Caffe|Caffe2|NCNN|ARM-ACL|ARM-NN|GLOW)
+            export framework_name
+            ;;
+        (*)
+            echo "user provided framework is not supported"
+            exit 1
+            ;;
+        esac
+    fi
+}
+
+validate_model_format ()
+{
+    if [ -z "${model_format}" ]; then
+        model_format=${default_model_format}
+        echo Defaulting to --model_format=NCNN
+    else
+        case "${model_format}" in
+        (Tensorflow|Tensorflow-lite|Caffe|Caffe2|NCNN|ONNX|NNEF|Darknet)
+            export model_format
+            ;;
+        (*)
+            echo "user provided model format is not supported"
+            exit 1
+            ;;
+        esac
+    fi
+}
+
+validate_model_format_in_framework ()
+{
+    if [ "${framework_name}" = "NCNN" ]; then
+        echo "NCNN framework is chosen"
+        ret="$(./ncnn/check_model_format)"
+        echo "ret is '${ret}'"
+        if [ "${ret}" = "native" ]; then
+            echo "model format is supported natively"
+        elif [ "${ret}" = "1" ]; then
+            echo "model format not supported"
+            exit 1
+        elif [ "${ret}" = "conversion" ]; then
+            echo "input model format can be converted to native format"
+        elif [ "${ret}" = "future" ]; then
+            echo "input model format conversion has build or run-time issues"
+            exit 1
+        else
+            echo "input model format is unknown"
+        fi
+    fi
+}
+
+validate_batch_size ()
+{
+    echo "batch size validation should be done by each ML framework"
+    start=$(echo "${batch_size}"| cut -d: -f1)
+    end=$(echo "${batch_size}"| cut -d: -f2)
+    step=$(echo "${batch_size}"| cut -d: -f3)
+    echo "start is ${start}"
+    echo "end is ${end}"
+    echo "step is ${step}"
+}
+
+fetch_model_file ()
+{
+    echo "fetching model file"
+    location=$(echo "${model_location}"| cut -d: -f1)
+    case "${location}" in
+    (local)
+        LOCAL_FILE_PATH=$(echo "${model_location}"| cut -d: -f2)
+        model_file_name="${LOCAL_FILE_PATH##*/}"
+        ;;
+    (remote)
+        REMOTE_SERVER=$(echo "${model_location}"| cut -d: -f2)
+        REMOTE_USER=$(echo "${model_location}"| cut -d: -f3)
+        REMOTE_PASSWORD=$(echo "${model_location}"| cut -d: -f4)
+        REMOTE_PATH=$(echo "${model_location}"| cut -d: -f5)
+        model_file_name="${REMOTE_PATH##*/}"
+        ;;
+    (URL)
+        URL_FILE=$(echo "${model_location}"| cut -d: -f2)
+        model_file_name="${URL_FILE##*/}"
+        ;;
+    (*)
+        echo "user provided model location not supported"
+        exit 1
+        ;;
+    esac
+}
+
+model_file_in_cache ()
+{
+    if [ "${framework_name}" = "NCNN" ]; then
+        if [ -e "${MODELDIR}/ncnn/${model_file_name}" ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    elif [ "${framework_name}" = "Caffe" ]; then
+        # For caffe all model file for inferencing is called
+        # deploy.prototxt. we need to create a sub-directory
+        # under caffe with the name of network that is part
+        # of the --meta_data. So we need to extract the 
+        # network name here.
+        # MODELDIR/caffe/<network>/deploy.prototxt
+        #network=$(echo "${meta_data}"| cut -d: -f2)
+        if [ ! -d "${MODELDIR}/caffe/${network}" ]; then
+            mkdir -p ${MODELDIR}/caffe/${network}
+            echo "false"
+            return
+        fi
+        if [ -e "${MODELDIR}/caffe/${network}/${model_file_name}" ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    elif [ "${framework_name}" = "Tensorflow" ]; then
+        if [ -e "${MODELDIR}/tf/${model_file_name}" ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    elif [ "${framework_name}" = "Tensorflow-lite" ]; then
+        if [ -e "${MODELDIR}/tflite/${model_file_name}" ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    fi
+}
+
+create_staging_directory ()
+{
+    # create a staging_native directory
+    if [ -d "${STAGING_NATIVE}" ]; then
+        echo "staging directory already exists"
+        rm -rf "${STAGING_NATIVE}/*"
+    else
+        mkdir -p "${STAGING_NATIVE}"
+    fi
+}
+
+remove_staging_directory ()
+{
+    if [ -d "${STAGING_NATIVE}" ]; then
+        rm -rf ${STAGING_NATIVE}
+    fi
+}
+
+create_conversion_staging_directory ()
+{
+    # create a staging_conversion directory
+    if [ -d "${STAGING_CONVERSION}" ]; then
+        echo "staging directory already exists"
+        rm -rf "${STAGING_CONVERSION}/*"
+    else
+        mkdir -p "${STAGING_CONVERSION}"
+    fi
+}
+
+remove_conversion_staging_directory ()
+{
+    if [ -d "${STAGING_CONVERSION}" ]; then
+        rm -rf ${STAGING_CONVERSION}
+    fi
+}
+
+scp_model_file ()
+{
+    sshpass -p ${REMOTE_PASSWORD} \
+        scp ${REMOTE_USER}@${REMOTE_SERVER}:${REMOTE_PATH} ${STAGING_NATIVE}/
+}
+
+model_file_processing_for_ncnn ()
+{
+    if [ "${model_format}" = "NCNN" ]; then
+        echo "model format natively supported by NCNN"
+        fetch_model_file
+        if [ "${location}" = "local" ]; then
+           #check whether model file exists in cache
+           if [ -e "${MODELDIR}/ncnn/${model_file_name}" ]; then
+               echo "ncnn:local: model file already in cache"
+               #copy cache to ncnn benchmark directory
+               cp ${MODELDIR}/ncnn/${model_file_name} ${NCNN_BENCH_DIR}/
+           else 
+               echo "ncnn:local: model file not in cache"
+               cp ${LOCAL_FILE_PATH} ${MODELDIR}/ncnn/
+               cp ${LOCAL_FILE_PATH} ${NCNN_BENCH_DIR}/
+           fi
+        elif [ "${location}" = "remote" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                echo "ncnn:remote : model file not in cache, scp needed"
+                scp_model_file
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/ncnn/
+                cp ${STAGING_NATIVE}/${model_file_name} ${NCNN_BENCH_DIR}/
+            else
+                echo "ncnn:remote : model file already in cache, scp not needed"
+                cp ${MODELDIR}/ncnn/${model_file_name} ${NCNN_BENCH_DIR}/
+            fi
+
+            # we are done with the staging directory
+            remove_staging_directory
+        elif [ "${location}" = "URL" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                wget -P ${STAGING_NATIVE} ${URL_FILE}
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/ncnn/
+                cp ${STAGING_NATIVE}/${model_file_name} ${NCNN_BENCH_DIR}/
+            else
+                cp ${MODELDIR}/ncnn/${model_file_name} ${NCNN_BENCH_DIR}/
+            fi
+            # we are done with the staging directory
+            remove_staging_directory
+        fi
+
+    elif [ "${model_format}" = "Caffe" ]; then
+        # create a staging directory
+        echo "input caffe model being converted to NCNN"
+    fi
+}
+
+model_file_processing_for_caffe ()
+{
+    if [ "${model_format}" = "Caffe" ]; then
+        echo "model format natively supported by Caffe"
+        fetch_model_file
+        network=$(echo "${meta_data}"| cut -d: -f2)
+        if [ "${location}" = "local" ]; then
+            #echo "network=${network}"
+            #echo "full path =  ${MODELDIR}/caffe/${network}"
+            #if [ ! -d ${MODELDIR}/caffe/${network} ]; then
+            #    echo "dir does not exists"
+            #else
+            #    echo "dir exists"
+            #fi
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                echo "caffe:local: model file not in cache"
+                echo "local path = ${LOCAL_FILE_PATH}"
+                echo "dest path=  ${MODELDIR}/caffe/${network}/"
+                echo "network = ${network}"
+                cp ${LOCAL_FILE_PATH} ${MODELDIR}/caffe/${network}/
+            else
+                echo "caffe:local: model file already in cache"
+            fi
+        elif [ "${location}" = "remote" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                echo "caffe:remote : model file not in cache, scp needed"
+                scp_model_file
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/caffe/${network}/
+            else
+                echo "caffe:remote : model file already in cache, scp not needed"
+            fi
+            # we are done with the staging directory
+            remove_staging_directory
+        elif [ "${location}" = "URL" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                wget -P ${STAGING_NATIVE} ${URL_FILE}
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/caffe/${network}/
+            fi
+            # we are done with the staging directory
+            remove_staging_directory
+        fi
+    elif [ "${model_format}" = "Tensorflow" ]; then
+        echo "input Tensorflow model is being converted to Caffe"
+        network=$(echo "${meta_data}"| cut -d: -f2)
+        # create a staging directory
+        create_conversion_staging_directory
+        echo "network = ${network}, framework = ${model_format}"
+        model_file_name="deploy.prototxt"
+        ${UTILDIR}/mmdnn_to_caffe ${network} ${model_format}
+        if [ ! -d ${MODELDIR}/caffe/${network} ]; then
+            mkdir -p ${MODELDIR}/caffe/${network}
+            cp ${STAGING_CONVERSION}/deploy.prototxt ${MODELDIR}/caffe/${network}
+            echo "model file name is ${model_file_name}"
+        fi
+        remove_conversion_staging_directory
+    fi
+}
+
+model_file_processing_for_tensorflow ()
+{
+    if [ "${model_format}" = "Tensorflow" ]; then
+        echo "model format natively supported by Tensorflow"
+        fetch_model_file
+        if [ "${location}" = "local" ]; then
+           #check whether model file exists in cache
+           if [ -e "${MODELDIR}/tf/${model_file_name}" ]; then
+               echo "tensorflow:local: model file already in cache"
+           else 
+               echo "tensorflow:local: model file not in cache"
+               cp ${LOCAL_FILE_PATH} ${MODELDIR}/tf/
+           fi
+        elif [ "${location}" = "remote" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                echo "tensorflow:remote : model file not in cache, scp needed"
+                scp_model_file
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/tf/
+            else
+                echo "tensorflow:remote : model file already in cache, scp not needed"
+            fi
+
+            # we are done with the staging directory
+            remove_staging_directory
+        elif [ "${location}" = "URL" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                wget -P ${STAGING_NATIVE} ${URL_FILE}
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/tf/
+            fi
+            # we are done with the staging directory
+            remove_staging_directory
+        fi
+
+    elif [ "${model_format}" = "Caffe" ]; then
+        # create a staging directory
+        echo "input caffe model being converted to Tensorflow"
+    fi
+}
+
+model_file_processing_for_tensorflow_lite ()
+{
+    if [ "${model_format}" = "Tensorflow-lite" ]; then
+        echo "model format natively supported by Tensorflow-lite"
+        fetch_model_file
+        if [ "${location}" = "local" ]; then
+           #check whether model file exists in cache
+           if [ -e "${MODELDIR}/tflite/${model_file_name}" ]; then
+               echo "tensorflow-lite:local: model file already in cache"
+           else 
+               echo "tensorflow-lite:local: model file not in cache"
+               cp ${LOCAL_FILE_PATH} ${MODELDIR}/tflite/
+           fi
+        elif [ "${location}" = "remote" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                echo "tensorflow-lite:remote : model file not in cache, scp needed"
+                scp_model_file
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/tflite/
+            else
+                echo "tensorflow-lite:remote : model file already in cache, scp not needed"
+            fi
+
+            # we are done with the staging directory
+            remove_staging_directory
+        elif [ "${location}" = "URL" ]; then
+            create_staging_directory
+            status=$(model_file_in_cache)
+            if [ "${status}" = "false" ]; then
+                wget -P ${STAGING_NATIVE} ${URL_FILE}
+                cp ${STAGING_NATIVE}/${model_file_name} ${MODELDIR}/tflite/
+            fi
+            # we are done with the staging directory
+            remove_staging_directory
+        fi
+
+    elif [ "${model_format}" = "Caffe" ]; then
+        # create a staging directory
+        echo "input caffe model being converted to Tensorflow-lite"
+    fi
+}
+
+run_benchmark_in_framework ()
+{
+    if [ -z ${batch_size} ]; then
+        batch_size=${default_batch_size}
+    fi
+    if [ -z ${aux_data} ]; then
+        aux_data=${default_aux_data}
+    fi
+    if [ "${framework_name}" = "NCNN" ]; then
+        case "${bench_type}" in
+        (monoshot|core_scale|core_thread_scale|thread_scale)
+            ${WORKDIR}/ncnn/run_ncnn_benchmark \
+                ${bench_type} \
+                ${meta_data} 
+            ;;
+        (batch_scale)
+            ${WORKDIR}/ncnn/run_ncnn_benchmark \
+                ${bench_type} \
+                ${meta_data} \
+                ${batch_size}
+            ;;
+        (shape_scale)
+            ${WORKDIR}/ncnn/run_ncnn_benchmark \
+                ${bench_type} \
+                ${meta_data} \
+                ${aux_data}
+            ;;
+        esac
+    elif [ "${framework_name}" = "Caffe" ]; then
+        case "${bench_type}" in
+        (monoshot|core_scale)
+            ${WORKDIR}/caffe/run_caffe_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name}
+            ;;
+        (batch_scale)
+            ${WORKDIR}/caffe/run_caffe_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${batch_size}
+            ;;
+        (shape_scale)
+            ${WORKDIR}/caffe/run_caffe_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${aux_data}
+            ;;
+        (core_thread_scale)
+            echo "ERROR : core_thread_scale benchmark type is not supported by Caffe"
+            ;;
+        esac
+    elif [ "${framework_name}" = "Tensorflow" ]; then
+        case "${bench_type}" in
+        (monoshot|core_scale)
+            ${WORKDIR}/tensorflow/run_tensorflow_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name}
+            ;;
+        (batch_scale)
+            ${WORKDIR}/tensorflow/run_tensorflow_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${batch_size}
+            ;;
+        (shape_scale)
+            ${WORKDIR}/tensorflow/run_tensorflow_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${aux_data}
+            ;;
+        (core_thread_scale)
+            ${WORKDIR}/tensorflow/run_tensorflow_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} 
+            ;;
+        (thread_scale)
+            ${WORKDIR}/tensorflow/run_tensorflow_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} 
+            ;;
+        esac
+    elif [ "${framework_name}" = "Tensorflow-lite" ]; then
+        case "${bench_type}" in
+        (monoshot|core_scale)
+            echo "${meta_data}:${model_file_name}"
+            ${WORKDIR}/tensorflow-lite/run_tensorflow_lite_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name}
+            ;;
+        (batch_scale)
+            ${WORKDIR}/tensorflow-lite/run_tensorflow_lite_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${batch_size}
+            ;;
+        (shape_scale)
+            ${WORKDIR}/tensorflow-lite/run_tensorflow_lite_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} \
+                ${aux_data}
+            ;;
+        (core_thread_scale)
+            ${WORKDIR}/tensorflow-lite/run_tensorflow_lite_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} 
+            ;;
+        (thread_scale)
+            ${WORKDIR}/tensorflow-lite/run_tensorflow_lite_benchmark \
+                ${bench_type} \
+                ${meta_data}:${model_file_name} 
+            ;;
+        esac
+    elif [ "${framework_name}" = "Caffe2" ]; then
+        case "${bench_type}" in
+        (monoshot|core_scale)
+            ${WORKDIR}/caffe2/run_caffe2_benchmark \
+                ${bench_type} \
+                ${meta_data}
+            ;;
+        (batch_scale)
+            ${WORKDIR}/caffe2/run_caffe2_benchmark \
+                ${bench_type} \
+                ${meta_data} \
+                ${batch_size}
+            ;;
+        esac
+    fi
+
+}
+
+model_file_processing ()
+{
+    if [ "${framework_name}" = "NCNN" ]; then
+        model_file_processing_for_ncnn
+    elif [ "${framework_name}" = "Caffe" ]; then
+        model_file_processing_for_caffe
+    elif [ "${framework_name}" = "Tensorflow" ]; then
+        model_file_processing_for_tensorflow
+    elif [ "${framework_name}" = "Tensorflow-lite" ]; then
+        model_file_processing_for_tensorflow_lite
+    fi
+}
+
+cmd=${0}
+while [ "$#" -gt "0" ]
+do
+    key="$1"
+    cmd="${cmd} ${key}"
+    case "${key}" in
+        *=?*) optarg=`expr "X$key" : '[^=]*=\(.*\)'` ;;
+        *=)   optarg= ;;
+        *)    optarg= ;;
+    esac
+
+    case "${key}" in
+    -h|--help)
+        show_usage
+        exit 1
+        ;;
+    --framework*)
+        echo "The optarg (framework) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--framework is null"
+        else
+            framework_name=${optarg}
+        fi
+        ;;
+    --model_location*)
+        echo "The optarg (model_file_location) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--model_file_location is null"
+        else
+            model_location=${optarg}
+            echo "model location is ${model_location}"
+        fi
+        ;;
+    --model_format*)
+        echo "The optarg (model_format) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--model_format is null"
+        else
+            model_format=${optarg}
+        fi
+        ;;
+    --batch_size*)
+        echo "The optarg (batch_size) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--batch_size is null"
+            batch_size=${default_batch_size}
+        else
+            batch_size=${optarg}
+        fi
+        ;;
+    --meta_data*)
+        echo "The optarg (meta_data) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--meta_data is null"
+            meta_data=${default_meta_data}
+        else
+            meta_data=${optarg}
+        fi
+        ;;
+    --bench_type*)
+        echo "The optarg (meta_data) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--bench_type is null"
+        else
+            bench_type=${optarg}
+        fi
+        ;;
+    --aux_data*)
+        echo "The optarg (aux_data) is ${optarg}"
+        if [ -z "${optarg}" ]; then
+            echo "--aux_data is null"
+            aux_data=${default_aux_data}
+        else
+            aux_data=${optarg}
+        fi
+        echo "aux_data is ${aux_data}"
+        ;;
+    esac
+    shift
+done
+
+echo "top total arg after shift is $#"
+if [ -e "${RESULTDIR}/side_band_info.txt" ]; then
+    rm "${RESULTDIR}/side_band_info.txt"
+fi
+
+case "${framework_name}" in
+(NCNN)
+    network=$(echo "${meta_data}"| cut -d: -f4)
+    ;;
+(Caffe)
+    network=$(echo "${meta_data}"| cut -d: -f2)
+    ;;
+(Tensorflow)
+    network=$(echo "${meta_data}"| cut -d: -f5)
+    ;;
+(Caffe2)
+    network="${meta_data}"
+    ;;
+esac
+
+echo "===========================================================================" >> ${RESULTDIR}/side_band_info.txt
+echo " ${network} ${bench_type} Performance report in ${framework_name}" >> ${RESULTDIR}/side_band_info.txt
+echo "===========================================================================" >> ${RESULTDIR}/side_band_info.txt
+
+echo "System information:" >> ${RESULTDIR}/side_band_info.txt
+echo "--------------------" >> ${RESULTDIR}/side_band_info.txt
+echo "CPU          = $(${UTILDIR}/cpu_name)" >> ${RESULTDIR}/side_band_info.txt
+echo "CPU speed    = $(${UTILDIR}/cpu_speed)" >> ${RESULTDIR}/side_band_info.txt
+echo "Core count   = $(${UTILDIR}/core_count)" >> ${RESULTDIR}/side_band_info.txt
+echo "OS           = $(${UTILDIR}/os_version)" >> ${RESULTDIR}/side_band_info.txt
+echo "Kernel       = $(${UTILDIR}/linux_kernel_version)" >> ${RESULTDIR}/side_band_info.txt
+if [ "${framework_name}" = "NCNN" ]; then
+    echo "NCNN ver     = $(${UTILDIR}/ncnn_version)" >> ${RESULTDIR}/side_band_info.txt
+fi
+echo "Command used =" >> ${RESULTDIR}/side_band_info.txt
+echo "${cmd}" >> ${RESULTDIR}/side_band_info.txt
+echo "" >> ${RESULTDIR}/side_band_info.txt
+
+#===============================================
+# Check whether we need to assign default values
+# Also validate the user provided options. If
+# incorrect or invalid options are provided,
+# gracefully exit from the program.
+#===============================================
+# validate user provided options
+validate_framework
+validate_model_format
+
+#Note that for Caffe2 framework we do not need any model file.
+if [ "${framework_name}" != "Caffe2" ]; then
+    model_file_processing
+fi
+
+#FIXME 1 : When model location is in server, then we copy over the
+#model file to staging area. We should use the staging area file
+#to compute weights. At this point the model file can be found in
+#the cache
+if [ "${framework_name}" = "NCNN" ]; then
+    ${UTILDIR}/ncnn_weight_calculator "${MODELDIR}/ncnn/${model_file_name}"
+fi
+echo "" >> ${RESULTDIR}/side_band_info.txt
+echo "Results:" >> ${RESULTDIR}/side_band_info.txt
+echo "--------" >> ${RESULTDIR}/side_band_info.txt
+
+run_benchmark_in_framework
+

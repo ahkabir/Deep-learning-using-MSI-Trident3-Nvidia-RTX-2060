@@ -1,0 +1,9 @@
+#!/bin/sh
+
+KVERSION="Unknown"
+if [ -f "/proc/version" ]; then
+	KVERSION="$(/bin/cat /proc/version)"
+fi
+echo "Kernel: ${KVERSION}"
+
+
